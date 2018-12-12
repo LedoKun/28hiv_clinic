@@ -138,6 +138,7 @@ class InvestigationModel(BaseModel):
     ppd = db.Column(db.Integer())
     cxr = db.Column(db.Unicode())
     tb = db.Column(db.Unicode())
+    hivResistence = db.Column(db.Unicode())
 
     # relationship to parent
     patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"))
@@ -159,7 +160,7 @@ class AppointmentModel(BaseModel):
     patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"))
 
 
-class icd10Model(db.Model):
+class ICD10Model(db.Model):
     """
     Store ICD10 information
     """

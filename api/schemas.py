@@ -20,7 +20,7 @@ class BaseSchema(Schema):
         additional = ["id"]
 
 
-class icd10Schema(BaseSchema):
+class ICD10Schema(BaseSchema):
     icd10WithDescription = fields.String(required=True)
 
 
@@ -122,6 +122,7 @@ class InvestigationSchema(BaseSchema):
         ),
         missing=None,
     )
+    hivResistence = fields.String(validate=lambda p: len(p) >= 2, missing=None)
 
     # relationship
     patient = fields.Nested(

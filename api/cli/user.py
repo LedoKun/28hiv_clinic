@@ -1,47 +1,14 @@
-import json
 import sys
 
 import click
 
 from api import db
-from api.models import UserModel, icd10Model
+from api.models import UserModel
 from api.schemas import UserSchema
 from marshmallow import pprint
 
 
 def register(app):
-    @app.cli.group()
-    def icd10():
-        """
-        ICD10 related commands
-        """
-        pass
-
-    @icd10.command()
-    def init():
-        """
-        Init icd10 database
-        """
-        with open("./api/utils/icd10.json") as f:
-            icd10_dict = json.load(f)
-
-        is_table_empty = not bool(icd10Model.query.first())
-
-        if is_table_empty:
-            for icd10_entry in icd10_dict:
-                print(
-                    "Adding: " + icd10_entry["icd10WithDescription"],
-                    file=sys.stdout,
-                )
-
-                icd10 = icd10Model()
-                icd10.icd10WithDescription = icd10_entry[
-                    "icd10WithDescription"
-                ]
-                db.session.add(icd10)
-
-            db.session.commit()
-
     @app.cli.group()
     def user():
         """

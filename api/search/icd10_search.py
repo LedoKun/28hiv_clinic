@@ -3,8 +3,8 @@ from flask_restful import Resource
 from webargs import fields
 from webargs.flaskparser import use_args
 
-from api.models import icd10Model
-from api.schemas import icd10Schema
+from api.models import ICD10Model
+from api.schemas import ICD10Schema
 
 search_args = {"keyword": fields.Str(required=True)}
 
@@ -16,8 +16,8 @@ class icd10Search(Resource):
             abort(422)
 
         results = (
-            icd10Model.query.filter(
-                icd10Model.icd10WithDescription.ilike(
+            ICD10Model.query.filter(
+                ICD10Model.icd10WithDescription.ilike(
                     "%{}%".format(args["keyword"])
                 )
             )
@@ -25,7 +25,7 @@ class icd10Search(Resource):
             .all()
         )
 
-        icd10_schema = icd10Schema(only=["icd10WithDescription"], many=True)
+        icd10_schema = ICD10Schema(only=["icd10WithDescription"], many=True)
 
         results = icd10_schema.dump(results).data
         results_list = [item["icd10WithDescription"] for item in results]
