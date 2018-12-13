@@ -17,9 +17,7 @@ class icd10Search(Resource):
 
         results = (
             ICD10Model.query.filter(
-                ICD10Model.icd10WithDescription.ilike(
-                    "%{}%".format(args["keyword"])
-                )
+                ICD10Model.icd10WithDescription.ilike("%{}%".format(args["keyword"]))
             )
             .limit(10)
             .all()

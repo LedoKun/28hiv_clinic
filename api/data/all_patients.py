@@ -16,9 +16,7 @@ class AllPatients(Resource):
     def get(self, page_args):
         page_number = page_args["page_number"]
         patients_per_page = int(current_app.config["PATIENTS_PER_PAGE"])
-        patients = PatientModel.query.paginate(
-            page_number, patients_per_page, False
-        )
+        patients = PatientModel.query.paginate(page_number, patients_per_page, False)
 
         patient_schema = PatientSchema(
             many=True,

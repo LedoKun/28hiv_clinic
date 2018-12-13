@@ -19,9 +19,7 @@ class Config(object):
     )
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI")
-    SQLALCHEMY_TRACK_MODIFICATIONS = os.environ.get(
-        "SQLALCHEMY_TRACK_MODIFICATIONS"
-    )
+    SQLALCHEMY_TRACK_MODIFICATIONS = os.environ.get("SQLALCHEMY_TRACK_MODIFICATIONS")
 
     BCRYPT_ROUNDS = os.environ.get("BCRYPT_ROUNDS")
     DEFAULT_USER = os.environ.get("DEFAULT_USER")

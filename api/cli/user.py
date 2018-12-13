@@ -25,13 +25,9 @@ def register(app):
         """
 
         user_schema = UserSchema()
-        credential = user_schema.load(
-            {"username": username, "password": password}
-        ).data
+        credential = user_schema.load({"username": username, "password": password}).data
 
-        credential["password"] = UserModel.generate_hash(
-            credential["password"]
-        )
+        credential["password"] = UserModel.generate_hash(credential["password"])
 
         new_user = UserModel(**credential)
         db.session.add(new_user)

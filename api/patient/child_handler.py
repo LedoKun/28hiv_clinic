@@ -3,12 +3,7 @@ from flask_restful import Resource
 from webargs.flaskparser import parser
 
 from api import db
-from api.models import (
-    AppointmentModel,
-    InvestigationModel,
-    PatientModel,
-    VisitModel,
-)
+from api.models import AppointmentModel, InvestigationModel, PatientModel, VisitModel
 from api.schemas import AppointmentSchema, InvestigationSchema, VisitSchema
 from flask_jwt_extended import jwt_required
 
@@ -32,6 +27,9 @@ class ChildHandler(Resource):
         if not hn:
             abort(422)
 
+        else:
+            hn = str(hn).replace("_", "/")
+
         # find patient id
         patient = PatientModel.query.filter(PatientModel.hn == hn).first()
 
@@ -39,9 +37,7 @@ class ChildHandler(Resource):
             abort(422)
 
         # get schema and model
-        model_object, schema_object = ChildHandler.getModelAndSchema(
-            child_type
-        )
+        model_object, schema_object = ChildHandler.getModelAndSchema(child_type)
 
         # get child data
         if child_type == "visit":
@@ -67,16 +63,22 @@ class ChildHandler(Resource):
 
     @jwt_required
     def put(self, hn, child_type):
+        import sys
+
+        print("****************************************", file=sys.stdout)
+        print("hn: {}, type: {}".format(hn, child_type), file=sys.stdout)
+
         # get schema and model
-        model_object, schema_object = ChildHandler.getModelAndSchema(
-            child_type
-        )
+        model_object, schema_object = ChildHandler.getModelAndSchema(child_type)
 
         args = parser.parse(schema_object, request, locations=["json"])
 
         # find patient id
         if not hn or not args:
             abort(422)
+
+        else:
+            hn = str(hn).replace("_", "/")
 
         patient = PatientModel.query.filter(PatientModel.hn == hn).first()
 
@@ -98,14 +100,10 @@ class ChildHandler(Resource):
             abort(422)
 
         # get schema and model
-        model_object, schema_object = ChildHandler.getModelAndSchema(
-            child_type
-        )
+        model_object, schema_object = ChildHandler.getModelAndSchema(child_type)
 
         # delete data in table
-        child_data = model_object.query.filter(
-            model_object.id == child_id
-        ).first()
+        child_data = model_object.query.filter(model_object.id == child_id).first()
 
         if child_data is None:
             abort(422)

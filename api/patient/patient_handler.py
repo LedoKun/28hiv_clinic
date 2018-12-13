@@ -14,6 +14,9 @@ class PatientHandler(Resource):
         if not hn:
             abort(422)
 
+        else:
+            hn = str(hn).replace("_", "/")
+
         patient = PatientModel.query.filter(PatientModel.hn == hn).first()
 
         patient_schema = PatientSchema()
@@ -22,9 +25,7 @@ class PatientHandler(Resource):
     @jwt_required
     def put(self):
         args = parser.parse(PatientSchema, request)
-        patient = PatientModel.query.filter(
-            PatientModel.hn == args["hn"]
-        ).first()
+        patient = PatientModel.query.filter(PatientModel.hn == args["hn"]).first()
 
         if patient is None:
             # Insert new data
@@ -43,6 +44,9 @@ class PatientHandler(Resource):
     def delete(self, hn):
         if not hn:
             abort(422)
+
+        else:
+            hn = str(hn).replace("_", "/")
 
         patient = PatientModel.query.filter(PatientModel.hn == hn).first()
 

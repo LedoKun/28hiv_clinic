@@ -34,9 +34,7 @@ class AllData:
         )
 
         # calculate age
-        self.df_patients["age"] = self.df_patients["dob"].apply(
-            AllData.calculate_age
-        )
+        self.df_patients["age"] = self.df_patients["dob"].apply(AllData.calculate_age)
 
         self.df_visits = pd.io.sql.read_sql(
             sql=VisitModel.query.with_entities(
@@ -53,9 +51,7 @@ class AllData:
             ).statement,
             con=db.session.bind,
         )
-        self.df_visits["date"] = pd.to_datetime(
-            self.df_visits["date"], errors="coerce"
-        )
+        self.df_visits["date"] = pd.to_datetime(self.df_visits["date"], errors="coerce")
         self.df_visits.set_index("date")
 
         self.df_ix = pd.io.sql.read_sql(
@@ -78,18 +74,14 @@ class AllData:
             ).statement,
             con=db.session.bind,
         )
-        self.df_ix["date"] = pd.to_datetime(
-            self.df_ix["date"], errors="coerce"
-        )
+        self.df_ix["date"] = pd.to_datetime(self.df_ix["date"], errors="coerce")
         self.df_ix.set_index("date")
 
     @staticmethod
     def calculate_age(born):
         today = date.today()
         return (
-            today.year
-            - born.year
-            - ((today.month, today.day) < (born.month, born.day))
+            today.year - born.year - ((today.month, today.day) < (born.month, born.day))
         )
 
 
@@ -127,9 +119,7 @@ class Tables(Resource):
             all_data.df_patients["nationality"] != "Thailand"
         ]
         df_non_thai_groupby_age = (
-            df_non_thai.groupby(
-                ["sex", "gender", pd.cut(df_non_thai.age, bins)]
-            )
+            df_non_thai.groupby(["sex", "gender", pd.cut(df_non_thai.age, bins)])
             .size()
             .unstack()
         )
@@ -139,9 +129,7 @@ class Tables(Resource):
         # Visits
         #########################
         df_all_visits_by_months = (
-            all_data.df_visits.groupby(
-                all_data.df_visits["date"].dt.strftime("%m/%Y")
-            )
+            all_data.df_visits.groupby(all_data.df_visits["date"].dt.strftime("%m/%Y"))
             .count()
             .unstack()
         )["patient_id"]
