@@ -33,7 +33,9 @@ class patientSearch(Resource):
             .all()
         )
 
-        patient_schema = PatientSchema(only=("hn", "name", "nationality"), many=True)
+        patient_schema = PatientSchema(
+            only=("hn", "name", "nationality"), many=True
+        )
 
         results = patient_schema.dump(results).data
 

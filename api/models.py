@@ -8,7 +8,9 @@ class BaseModel(db.Model):
     __abstract__ = True
 
     def __repr__(self):
-        return "<BaseModel(name={self.__class__.__name__!r})>".format(self=self)
+        return "<BaseModel(name={self.__class__.__name__!r})>".format(
+            self=self
+        )
 
     def __str__(self):
         return str(self.__repr__)
@@ -186,7 +188,9 @@ class UserModel(db.Model):
 
     @staticmethod
     def generate_hash(password):
-        return bcrypt.using(rounds=current_app.config["BCRYPT_ROUNDS"]).hash(password)
+        return bcrypt.using(rounds=current_app.config["BCRYPT_ROUNDS"]).hash(
+            password
+        )
 
 
 class RevokedTokenModel(db.Model):

@@ -19,13 +19,16 @@ class Dashboard(Resource):
 
         # today_appointment
         today_appointment = (
-            AppointmentModel.query.filter(AppointmentModel.date == selected_date)
+            AppointmentModel.query.filter(
+                AppointmentModel.date == selected_date
+            )
             .order_by(AppointmentModel.id)
             .all()
         )
 
         appointment_schema = AppointmentSchema(
-            only=["date", "appointmentFor", "patient.hn", "patient.name"], many=True
+            only=["date", "appointmentFor", "patient.hn", "patient.name"],
+            many=True,
         )
 
         today_appointment = appointment_schema.dump(today_appointment).data
@@ -38,7 +41,8 @@ class Dashboard(Resource):
         )
 
         visit_schema = VisitSchema(
-            only=["date", "impression", "patient.hn", "patient.name"], many=True
+            only=["date", "impression", "patient.hn", "patient.name"],
+            many=True,
         )
 
         patient_examined = visit_schema.dump(patient_examined).data

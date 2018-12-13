@@ -25,10 +25,15 @@ def register(app):
 
         if is_table_empty:
             for icd10_entry in icd10_dict:
-                print("Adding: " + icd10_entry["icd10WithDescription"], file=sys.stdout)
+                print(
+                    "Adding: " + icd10_entry["icd10WithDescription"],
+                    file=sys.stdout,
+                )
 
                 icd10 = ICD10Model()
-                icd10.icd10WithDescription = icd10_entry["icd10WithDescription"]
+                icd10.icd10WithDescription = icd10_entry[
+                    "icd10WithDescription"
+                ]
                 db.session.add(icd10)
 
             db.session.commit()

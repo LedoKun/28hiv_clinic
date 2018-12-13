@@ -8,7 +8,9 @@ Schema.TYPE_MAPPING[db.Column(db.Unicode())] = fields.String
 
 class BaseSchema(Schema):
     def __repr__(self):
-        return "<BaseSchema(name={self.__class__.__name__!r})>".format(self=self)
+        return "<BaseSchema(name={self.__class__.__name__!r})>".format(
+            self=self
+        )
 
     def __str__(self):
         return str(self.__repr__)
@@ -31,11 +33,17 @@ class VisitSchema(BaseSchema):
     date = fields.Date(required=True)
     bw = fields.Float(validate=lambda p: 0.0 <= p, missing=None)
     contactTB = fields.String(
-        validate=validate.OneOf(["Contacted with TB", "Not Contacted with TB"]),
+        validate=validate.OneOf(
+            ["Contacted with TB", "Not Contacted with TB"]
+        ),
         missing=None,
     )
-    adherenceScale = fields.Integer(validate=lambda p: 0 <= p <= 100, missing=None)
-    adherenceProblem = fields.String(validate=lambda p: len(p) >= 2, missing=None)
+    adherenceScale = fields.Integer(
+        validate=lambda p: 0 <= p <= 100, missing=None
+    )
+    adherenceProblem = fields.String(
+        validate=lambda p: len(p) >= 2, missing=None
+    )
     delayedDosing = fields.Integer(validate=lambda p: 0 <= p, missing=None)
     impression = fields.List(fields.String(required=True), required=True)
     arv = fields.List(
@@ -61,13 +69,16 @@ class VisitSchema(BaseSchema):
         missing=None,
     )
     oiProphylaxis = fields.List(
-        fields.String(validate=lambda p: len(p) >= 2, missing=None), missing=None
+        fields.String(validate=lambda p: len(p) >= 2, missing=None),
+        missing=None,
     )
     antiTB = fields.List(
-        fields.String(validate=lambda p: len(p) >= 2, missing=None), missing=None
+        fields.String(validate=lambda p: len(p) >= 2, missing=None),
+        missing=None,
     )
     vaccination = fields.List(
-        fields.String(validate=lambda p: len(p) >= 2, missing=None), missing=None
+        fields.String(validate=lambda p: len(p) >= 2, missing=None),
+        missing=None,
     )
 
     # relationship
@@ -84,9 +95,13 @@ class InvestigationSchema(BaseSchema):
     cd4 = fields.Integer(validate=lambda p: 0 <= p, missing=None)
     pCD4 = fields.Float(validate=lambda p: 0 <= p <= 100, missing=None)
     vl = fields.Integer(validate=lambda p: 0 <= p, missing=None)
-    vdrl = fields.String(validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None)
+    vdrl = fields.String(
+        validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None
+    )
     rpr = fields.Integer(validate=lambda p: 0 <= p, missing=None)
-    hbsag = fields.String(validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None)
+    hbsag = fields.String(
+        validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None
+    )
     antiHBs = fields.String(
         validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None
     )
@@ -107,7 +122,9 @@ class InvestigationSchema(BaseSchema):
         ),
         missing=None,
     )
-    hivResistence = fields.String(validate=lambda p: len(p) >= 2, missing=None)
+    hivResistence = fields.String(
+        validate=lambda p: len(p) >= 2, missing=None
+    )
 
     # relationship
     patient = fields.Nested(
@@ -117,7 +134,9 @@ class InvestigationSchema(BaseSchema):
 
 class AppointmentSchema(BaseSchema):
     date = fields.Date(required=True)
-    appointmentFor = fields.String(validate=lambda p: len(p) >= 2, required=True)
+    appointmentFor = fields.String(
+        validate=lambda p: len(p) >= 2, required=True
+    )
 
     # relationship
     patient = fields.Nested(
@@ -132,7 +151,9 @@ class PatientSchema(BaseSchema):
     nap = fields.String(validate=lambda p: len(p) >= 2, missing=None)
     name = fields.String(validate=lambda p: len(p) >= 2, required=True)
     dob = fields.Date(allow_none=True)
-    sex = fields.String(validate=validate.OneOf(["ชาย", "หญิง", "-"]), required=True)
+    sex = fields.String(
+        validate=validate.OneOf(["ชาย", "หญิง", "-"]), required=True
+    )
     gender = fields.String(
         validate=validate.OneOf(
             ["Heterosexual", "Homosexual", "Lesbian", "Bisexual", "-"]
@@ -183,10 +204,12 @@ class PatientSchema(BaseSchema):
         allow_none=True,
     )
     tel = fields.List(
-        fields.String(allow_none=True, validate=lambda p: len(p) >= 1), allow_none=True
+        fields.String(allow_none=True, validate=lambda p: len(p) >= 1),
+        allow_none=True,
     )
     relative_tel = fields.List(
-        fields.String(allow_none=True, validate=lambda p: len(p) >= 1), allow_none=True
+        fields.String(allow_none=True, validate=lambda p: len(p) >= 1),
+        allow_none=True,
     )
     address = fields.String(validate=lambda p: len(p) >= 2, missing=None)
 

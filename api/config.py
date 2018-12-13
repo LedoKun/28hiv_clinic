@@ -1,5 +1,4 @@
 import os
-import datetime
 
 from dotenv import load_dotenv
 
@@ -14,12 +13,11 @@ class Config(object):
     SECRET_KEY = os.environ.get("SECRET_KEY")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
     JWT_BLACKLIST_ENABLED = os.environ.get("JWT_BLACKLIST_ENABLED")
-    JWT_EXPIRATION_DELTA = datetime.timedelta(
-        int(os.environ.get("JWT_EXPIRATION_DELTA"))
-    )
 
     SQLALCHEMY_DATABASE_URI = os.environ.get("SQLALCHEMY_DATABASE_URI")
-    SQLALCHEMY_TRACK_MODIFICATIONS = os.environ.get("SQLALCHEMY_TRACK_MODIFICATIONS")
+    SQLALCHEMY_TRACK_MODIFICATIONS = os.environ.get(
+        "SQLALCHEMY_TRACK_MODIFICATIONS"
+    )
 
     BCRYPT_ROUNDS = os.environ.get("BCRYPT_ROUNDS")
     DEFAULT_USER = os.environ.get("DEFAULT_USER")

@@ -25,7 +25,9 @@ class PatientHandler(Resource):
     @jwt_required
     def put(self):
         args = parser.parse(PatientSchema, request)
-        patient = PatientModel.query.filter(PatientModel.hn == args["hn"]).first()
+        patient = PatientModel.query.filter(
+            PatientModel.hn == args["hn"]
+        ).first()
 
         if patient is None:
             # Insert new data
