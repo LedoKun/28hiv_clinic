@@ -6,7 +6,7 @@ Add additional error handlers as needed
 
 from api.errors import bp
 from werkzeug.exceptions import HTTPException
-from flask.json import jsonify, abort
+from flask.json import jsonify
 from webargs.flaskparser import parser
 from flask import abort
 from jwt.exceptions import ExpiredSignatureError
