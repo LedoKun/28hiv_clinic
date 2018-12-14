@@ -52,7 +52,7 @@ def error_handler(error):
 
         return (jsonify(error_payload), error.code)
 
-    elif isinstance(ExpiredSignatureError):
+    elif isinstance(error, ExpiredSignatureError):
         abort(401)
 
     else:
