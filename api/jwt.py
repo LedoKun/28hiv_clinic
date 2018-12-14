@@ -6,3 +6,6 @@ from api.models import RevokedTokenModel
 def check_if_token_in_blacklist(decrypted_token):
     jti = decrypted_token["jti"]
     return RevokedTokenModel.is_jti_blacklisted(jti)
+
+# Set error handler
+jwt._set_error_handler_callbacks(api)
