@@ -1,4 +1,4 @@
-from flask import jsonify, request
+from flask import jsonify, request, abort
 from flask_restful import Resource
 from webargs import fields
 from webargs.flaskparser import parser
@@ -15,6 +15,10 @@ class Dashboard(Resource):
     @jwt_required
     def get(self):
         args = parser.parse(today_args, request)
+
+        if not args:
+            abort(422)
+
         selected_date = args["date"]
 
         # today_appointment

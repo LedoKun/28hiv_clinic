@@ -25,6 +25,10 @@ class PatientHandler(Resource):
     @jwt_required
     def put(self):
         args = parser.parse(PatientSchema, request)
+
+        if not args:
+            abort(422)
+
         patient = PatientModel.query.filter(
             PatientModel.hn == args["hn"]
         ).first()

@@ -10,6 +10,10 @@ from flask_jwt_extended import create_access_token, create_refresh_token
 class Login(Resource):
     def post(self):
         args = parser.parse(UserSchema, request)
+
+        if not args:
+            abort(422)
+
         user = UserModel.query.filter(
             UserModel.username == args["username"]
         ).first()
