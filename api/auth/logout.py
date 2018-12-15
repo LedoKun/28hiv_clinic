@@ -1,39 +1,34 @@
-from flask import abort, jsonify
+from flask import jsonify
 from flask_restful import Resource
+from webargs import fields
+from webargs.flaskparser import use_args
 
-from api.models import RevokedTokenModel
-from flask_jwt_extended import (
-    jwt_required,
-    get_raw_jwt,
-    jwt_refresh_token_required,
-)
 from api import db
+from api.models import RevokedTokenModel
+from flask_jwt_extended import get_jti, jwt_required
+
+logout_args = {
+    "jwt_token": fields.Str(required=True),
+    "jwt_refresh_token": fields.Str(required=True),
+}
 
 
 class Logout(Resource):
     @jwt_required
-    def post(self):
-        jti = get_raw_jwt()["jti"]
+    @use_args(logout_args)
+    def delete(self, args):
+        access_jti = get_jti(args["jwt_token"])
+        refresh_jti = get_jti(args["jwt_refresh_token"])
 
-        if not bool(jti):
-            abort(400)
+        if bool(access_jti):
+            revoked_access_token = RevokedTokenModel(jti=access_jti)
+            db.session.add(revoked_access_token)
 
-        revoked_token = RevokedTokenModel(jti=jti)
-        db.session.add(revoked_token)
-        db.session.commit()
+        if bool(refresh_jti):
+            revoked_refresh_token = RevokedTokenModel(jti=refresh_jti)
+            db.session.add(revoked_refresh_token)
+
+        if bool(access_jti) or bool(refresh_jti):
+            db.session.commit()
 
         return jsonify({"message": "OK"})
-
-
-class LogoutRefresh(Resource):
-    @jwt_refresh_token_required
-    def post(self):
-        jti = get_raw_jwt()["jti"]
-
-        if not bool(jti):
-            abort(400)
-
-        revoked_token = RevokedTokenModel(jti=jti)
-        db.session.add(revoked_token)
-        db.session.commit()
-        return {"message": "OK"}

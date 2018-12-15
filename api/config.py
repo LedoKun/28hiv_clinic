@@ -9,7 +9,7 @@ load_dotenv(os.path.join(basedir, ".env"))
 
 class Config(object):
     TRAP_HTTP_EXCEPTIONS = os.environ.get("TRAP_HTTP_EXCEPTIONS")
-    PROPAGATE_EXCEPTIONS = os.environ.get("PROPAGATE_EXCEPTIONS")
+    # PROPAGATE_EXCEPTIONS = os.environ.get("PROPAGATE_EXCEPTIONS")
 
     SECRET_KEY = os.environ.get("SECRET_KEY")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")

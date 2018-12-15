@@ -70,11 +70,6 @@ class ChildHandler(Resource):
 
     @jwt_required
     def put(self, hn, child_type):
-        import sys
-
-        print("****************************************", file=sys.stdout)
-        print("hn: {}, type: {}".format(hn, child_type), file=sys.stdout)
-
         # get schema and model
         model_object, schema_object = ChildHandler.getModelAndSchema(
             child_type
