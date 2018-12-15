@@ -6,6 +6,7 @@ from api import db
 from api.models import UserModel
 from api.schemas import UserSchema
 from marshmallow import pprint
+from getpass import getpass
 
 
 def register(app):
@@ -18,11 +19,11 @@ def register(app):
 
     @user.command()
     @click.argument("username")
-    @click.argument("password")
-    def add(username, password):
+    def add(username):
         """
         Add user via command-line interface
         """
+        password = getpass()        
 
         user_schema = UserSchema()
         credential = user_schema.load(
