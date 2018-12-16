@@ -10,7 +10,7 @@ from flask.json import jsonify
 from webargs.flaskparser import parser
 
 
-@bp.app_errorhandler(Exception)
+# @bp.app_errorhandler(Exception)
 def error_handler(error):
     """
     Standard Error Handler
@@ -39,9 +39,6 @@ def error_handler(error):
 
 
 # This error handler is necessary for usage with Flask-RESTful
-# @parser.error_handler
-# def handle_request_parsing_error(error, req, schema):
-#     error_handler(error)
 @parser.error_handler
 def handle_parse_error(error, req, schema):
     error_handler(error)

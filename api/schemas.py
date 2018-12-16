@@ -150,7 +150,7 @@ class PatientSchema(BaseSchema):
     cid = fields.String(validate=lambda p: len(p) >= 2, missing=None)
     nap = fields.String(validate=lambda p: len(p) >= 2, missing=None)
     name = fields.String(validate=lambda p: len(p) >= 2, required=True)
-    dob = fields.Date(allow_none=True)
+    dob = fields.Date(allow_none=True, required=True)
     sex = fields.String(
         validate=validate.OneOf(["ชาย", "หญิง", "-"]), required=True
     )

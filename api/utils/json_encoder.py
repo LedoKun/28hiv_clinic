@@ -1,6 +1,11 @@
 import datetime
+
 from flask.json import JSONEncoder
+
 from flask_sqlalchemy import Pagination
+# from pandas import DataFrame, Series
+
+# import json
 
 
 class JSONEncoder(JSONEncoder):
@@ -24,5 +29,19 @@ class JSONEncoder(JSONEncoder):
                 "prev_num": o.prev_num,
                 "total": o.total,
             }
+
+        # if isinstance(o, (DataFrame, Series)):
+        #     if isinstance(o, Series):
+        #         o = o.to_frame()
+
+        #     o = o.reset_index()
+
+        #     return json.loads(o.to_json(orient='split', default_handler=str))
+
+        # if isinstance(o, DataFrame):
+        #     return json.loads(o.to_json(orient="split", default_handler=str))
+
+        # if isinstance(o, Series):
+        #     return json.loads(o.to_json(default_handler=str))
 
         return super().default(o)

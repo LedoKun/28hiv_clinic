@@ -2,14 +2,13 @@ from flask import jsonify
 from flask_restful import Resource
 
 from api.models import PatientModel, VisitModel, InvestigationModel
-from flask_jwt_extended import jwt_required
+
+# from flask_jwt_extended import jwt_required
 
 import pandas as pd
 from api import db
 from datetime import date
 import numpy as np
-
-import sys
 
 
 class AllData:
@@ -18,6 +17,7 @@ class AllData:
     df_ix = None
 
     def __init__(self):
+        # Patients information
         self.df_patients = pd.io.sql.read_sql(
             sql=PatientModel.query.with_entities(
                 PatientModel.id,
@@ -38,6 +38,7 @@ class AllData:
             AllData.calculate_age
         )
 
+        # Visits information
         self.df_visits = pd.io.sql.read_sql(
             sql=VisitModel.query.with_entities(
                 VisitModel.id,
@@ -58,6 +59,7 @@ class AllData:
         )
         self.df_visits.set_index("date")
 
+        # Investigation information
         self.df_ix = pd.io.sql.read_sql(
             sql=InvestigationModel.query.with_entities(
                 InvestigationModel.id,
@@ -85,15 +87,21 @@ class AllData:
 
     @staticmethod
     def calculate_age(born):
-        today = date.today()
-        return (
-            today.year
-            - born.year
-            - ((today.month, today.day) < (born.month, born.day))
-        )
+        if isinstance(born, date):
+            today = date.today()
+            age = (
+                today.year
+                - born.year
+                - ((today.month, today.day) < (born.month, born.day))
+            )
+
+            return age
+
+        else:
+            return None
 
 
-class Tables(Resource):
+class Stats(Resource):
     # @jwt_required
     def get(Resource):
         all_data = AllData()
@@ -102,7 +110,8 @@ class Tables(Resource):
         # demographic data
         #########################
         # age
-        bins = np.arange(0, 100, 10)
+        bins = np.arange(0, 110, 10)
+
         df_groupby_age = (
             all_data.df_patients.groupby(
                 ["sex", "gender", pd.cut(all_data.df_patients.age, bins)]
@@ -146,11 +155,13 @@ class Tables(Resource):
             .unstack()
         )["patient_id"]
 
-        print(df_groupby_age, file=sys.stdout)
-        print(df_thais_groupby_age, file=sys.stdout)
-        print(df_thais_groupby_payer, file=sys.stdout)
-        print(df_non_thai_groupby_age, file=sys.stdout)
-        print(df_non_thai_groupby_payer, file=sys.stdout)
-        print(df_all_visits_by_months, file=sys.stdout)
-
-        return jsonify({"msg": "okay"})
+        return jsonify(
+            {
+                "df_groupby_age": df_groupby_age,
+                "df_thais_groupby_age": df_thais_groupby_age,
+                "df_thais_groupby_payer": df_thais_groupby_payer,
+                "df_non_thai_groupby_age": df_non_thai_groupby_age,
+                "df_non_thai_groupby_payer": df_non_thai_groupby_payer,
+                "df_all_visits_by_months": df_all_visits_by_months,
+            }
+        )
