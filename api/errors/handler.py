@@ -10,7 +10,7 @@ from flask.json import jsonify
 from webargs.flaskparser import parser
 
 
-# @bp.app_errorhandler(Exception)
+@bp.app_errorhandler(Exception)
 def error_handler(error):
     """
     Standard Error Handler
