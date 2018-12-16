@@ -9,7 +9,6 @@ load_dotenv(os.path.join(basedir, ".env"))
 
 class Config(object):
     TRAP_HTTP_EXCEPTIONS = os.environ.get("TRAP_HTTP_EXCEPTIONS")
-    # PROPAGATE_EXCEPTIONS = os.environ.get("PROPAGATE_EXCEPTIONS")
 
     SECRET_KEY = os.environ.get("SECRET_KEY")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
@@ -25,3 +24,9 @@ class Config(object):
     DEFAULT_PASSWORD = os.environ.get("DEFAULT_PASSWORD")
 
     PATIENTS_PER_PAGE = os.environ.get("PATIENTS_PER_PAGE")
+    DASHBOARD_APPOINTMENT_PER_PAGE = os.environ.get(
+        "DASHBOARD_APPOINTMENT_PER_PAGE"
+    )
+    DASHBOARD_EXAMINED_PER_PAGE = os.environ.get(
+        "DASHBOARD_EXAMINED_PER_PAGE"
+    )
