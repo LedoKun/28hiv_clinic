@@ -4,7 +4,6 @@ appdirs==1.4.3
 asn1crypto==0.24.0
 attrs==18.2.0
 bcrypt==3.1.4
-black
 cffi==1.11.5
 Click==7.0
 Faker==1.0.0
