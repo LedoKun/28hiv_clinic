@@ -30,3 +30,7 @@ class Config(object):
     DASHBOARD_EXAMINED_PER_PAGE = os.environ.get(
         "DASHBOARD_EXAMINED_PER_PAGE"
     )
+
+    STATS_TABLE_CLASSES = os.environ.get(
+        "STATS_TABLE_CLASSES"
+    ).split(",")
