@@ -111,6 +111,9 @@ class Stats(Resource):
     def get(Resource):
         all_data = AllData()
 
+        if all_data.df_patients.empty:
+            return jsonify({})
+
         #########################
         # demographic data
         #########################
