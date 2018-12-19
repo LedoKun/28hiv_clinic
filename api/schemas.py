@@ -47,25 +47,7 @@ class VisitSchema(BaseSchema):
     delayedDosing = fields.Integer(validate=lambda p: 0 <= p, missing=None)
     impression = fields.List(fields.String(required=True), required=True)
     arv = fields.List(
-        fields.String(
-            validate=validate.OneOf(
-                [
-                    "3TC",
-                    "ABC",
-                    "ATV",
-                    "AZT",
-                    "DRV",
-                    "EFV",
-                    "FTC",
-                    "LPV/r",
-                    "NVP",
-                    "RPV",
-                    "RTV",
-                    "TDF",
-                ]
-            ),
-            missing=None,
-        ),
+        fields.String(validate=lambda p: len(p) >= 2, missing=None),
         missing=None,
     )
     oiProphylaxis = fields.List(
