@@ -132,7 +132,7 @@ class PatientSchema(BaseSchema):
     cid = fields.String(validate=lambda p: len(p) >= 2, missing=None)
     nap = fields.String(validate=lambda p: len(p) >= 2, missing=None)
     name = fields.String(validate=lambda p: len(p) >= 2, required=True)
-    dob = fields.Date(allow_none=True, required=True)
+    dob = fields.Date(required=True)
     sex = fields.String(
         validate=validate.OneOf(["ชาย", "หญิง", "-"]), required=True
     )
@@ -140,12 +140,12 @@ class PatientSchema(BaseSchema):
         validate=validate.OneOf(
             ["Heterosexual", "Homosexual", "Lesbian", "Bisexual", "-"]
         ),
-        allow_none=True,
+        missing=None,
     )
     marital = fields.String(
         validate=validate.OneOf(["โสด", "สมรส", "ม่าย", "-"]), missing=None
     )
-    nationality = fields.String(allow_none=True)
+    nationality = fields.String(missing=None)
     payer = fields.String(
         validate=validate.OneOf(
             [
@@ -183,15 +183,15 @@ class PatientSchema(BaseSchema):
                 "-",
             ]
         ),
-        allow_none=True,
+        missing=None,
     )
     tel = fields.List(
-        fields.String(allow_none=True, validate=lambda p: len(p) >= 1),
-        allow_none=True,
+        fields.String(missing=None, validate=lambda p: len(p) >= 1),
+        missing=None,
     )
     relative_tel = fields.List(
-        fields.String(allow_none=True, validate=lambda p: len(p) >= 1),
-        allow_none=True,
+        fields.String(missing=None, validate=lambda p: len(p) >= 1),
+        missing=None,
     )
     address = fields.String(validate=lambda p: len(p) >= 2, missing=None)
 

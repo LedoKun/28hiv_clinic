@@ -45,7 +45,15 @@ class Dashboard(Resource):
         )
 
         appointment_schema = AppointmentSchema(
-            only=["date", "appointmentFor", "patient.hn", "patient.name"],
+            only=[
+                "date",
+                "appointmentFor",
+                "patient.hn",
+                "patient.cid",
+                "patient.name",
+                "patient.tel",
+                "patient.relative_tel",
+            ],
             many=True,
         )
 
@@ -61,7 +69,13 @@ class Dashboard(Resource):
         )
 
         visit_schema = VisitSchema(
-            only=["date", "impression", "patient.hn", "patient.name"],
+            only=[
+                "date",
+                "impression",
+                "patient.hn",
+                "patient.cid",
+                "patient.name",
+            ],
             many=True,
         )
 
