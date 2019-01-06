@@ -57,6 +57,7 @@ class AllData:
                 VisitModel.oiProphylaxis,
                 VisitModel.antiTB,
                 VisitModel.vaccination,
+                VisitModel.patient_id,
             ).statement,
             con=db.session.bind,
         )
@@ -128,6 +129,7 @@ class AllData:
                 InvestigationModel.lineProbeAssay,
                 InvestigationModel.hivResistance,
                 InvestigationModel.hivMutation,
+                InvestigationModel.patient_id,
             ).statement,
             con=db.session.bind,
         )
