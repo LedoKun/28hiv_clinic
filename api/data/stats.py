@@ -9,6 +9,8 @@ from api import db
 from api.models import InvestigationModel, PatientModel, VisitModel
 from flask_jwt_extended import jwt_required
 
+# MUST REWRITE EVERYTHING IN THIS FILE! *********************
+
 
 class AllData:
     df_patients = None
@@ -47,11 +49,14 @@ class AllData:
                 VisitModel.bw,
                 VisitModel.contactTB,
                 VisitModel.adherenceScale,
+                VisitModel.adherenceProblem,
+                VisitModel.delayedDosing,
+                VisitModel.impression,
                 VisitModel.arv,
+                VisitModel.whySwitch,
                 VisitModel.oiProphylaxis,
                 VisitModel.antiTB,
                 VisitModel.vaccination,
-                VisitModel.patient_id,
             ).statement,
             con=db.session.bind,
         )
@@ -71,15 +76,58 @@ class AllData:
                 InvestigationModel.cd4,
                 InvestigationModel.pCD4,
                 InvestigationModel.vl,
+                InvestigationModel.wbc,
+                InvestigationModel.hb,
+                InvestigationModel.hct,
+                InvestigationModel.wbcPNeu,
+                InvestigationModel.wbcPLym,
+                InvestigationModel.wbcPEos,
+                InvestigationModel.wbcPBasos,
+                InvestigationModel.bun,
+                InvestigationModel.cr,
+                InvestigationModel.na,
+                InvestigationModel.k,
+                InvestigationModel.cl,
+                InvestigationModel.hco3,
+                InvestigationModel.ca,
+                InvestigationModel.mg,
+                InvestigationModel.po4,
+                InvestigationModel.fbs,
+                InvestigationModel.hba1c,
+                InvestigationModel.urine_glucose_dipstick,
+                InvestigationModel.urine_prot_dipstick,
+                InvestigationModel.urine_glucose,
+                InvestigationModel.urine_prot,
+                InvestigationModel.urine_cr,
+                InvestigationModel.chol,
+                InvestigationModel.tg,
+                InvestigationModel.hdl,
+                InvestigationModel.ldl,
+                InvestigationModel.total_prot,
+                InvestigationModel.albumin,
+                InvestigationModel.globulin,
+                InvestigationModel.total_bilirubin,
+                InvestigationModel.direct_bilirubin,
+                InvestigationModel.ast,
+                InvestigationModel.alt,
+                InvestigationModel.alp,
+                InvestigationModel.tpha,
                 InvestigationModel.vdrl,
                 InvestigationModel.rpr,
                 InvestigationModel.hbsag,
                 InvestigationModel.antiHBs,
                 InvestigationModel.antiHCV,
+                InvestigationModel.cryptoAgBlood,
+                InvestigationModel.cryptoAgCSF,
                 InvestigationModel.ppd,
                 InvestigationModel.cxr,
-                InvestigationModel.tb,
-                InvestigationModel.patient_id,
+                InvestigationModel.afb,
+                InvestigationModel.sputumCulture,
+                InvestigationModel.dst,
+                InvestigationModel.geneXpert,
+                InvestigationModel.lineProbeAssay,
+                InvestigationModel.hivResistance,
+                InvestigationModel.hivMutation,
             ).statement,
             con=db.session.bind,
         )
@@ -109,16 +157,19 @@ class AllData:
 class Stats(Resource):
     @jwt_required
     def get(Resource):
+        if PatientModel.query.first() is None:
+            return jsonify({})
+
         all_data = AllData()
 
-        if all_data.df_patients.empty:
+        if all_data.df_patients.empty or all_data.df_visits.empty:
             return jsonify({})
 
         #########################
         # demographic data
         #########################
         # age
-        bins = np.arange(0, 110, 10)
+        bins = np.arange(-10, 110, 10)
 
         df_groupby_age = (
             all_data.df_patients.groupby(
@@ -164,6 +215,7 @@ class Stats(Resource):
         #########################
         # Visits
         #########################
+
         # new patients by months
         df_new_patient = all_data.df_visits.sort_values(
             "date", ascending=True

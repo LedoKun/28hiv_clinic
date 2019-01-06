@@ -19,7 +19,12 @@ class BaseModel(db.Model):
         """
         Update column using the provided dictionary
         """
-        __skip__ = ["_sa_instance_state"]
+        __skip__ = [
+            "_sa_instance_state",
+            "id",
+            "timestamp",
+            "modify_timestamp",
+        ]
         all_keys = list(vars(self).keys())
 
         for key in all_keys:
@@ -46,7 +51,7 @@ class PatientModel(BaseModel):
     """
 
     __tablename__ = "patient"
-    __protected__ = ["id", "hn", "timestamp", "modify_timestamp"]
+    __protected__ = ["hn"]
     __relationship__ = ["visits", "investigations", "appointments"]
 
     hn = db.Column(db.Unicode(), unique=True)
@@ -97,7 +102,7 @@ class VisitModel(BaseModel):
     """
 
     __tablename__ = "visit"
-    __protected__ = ["id", "parent_id"]
+    __protected__ = []
     __relationship__ = ["patient_id"]
 
     date = db.Column(db.Date())
@@ -108,6 +113,7 @@ class VisitModel(BaseModel):
     delayedDosing = db.Column(db.Integer())
     impression = db.Column(db.ARRAY(db.Unicode()))
     arv = db.Column(db.ARRAY(db.Unicode()))
+    whySwitch = db.Column(db.Unicode())
     oiProphylaxis = db.Column(db.ARRAY(db.Unicode()))
     antiTB = db.Column(db.ARRAY(db.Unicode()))
     vaccination = db.Column(db.ARRAY(db.Unicode()))
@@ -122,23 +128,92 @@ class InvestigationModel(BaseModel):
     """
 
     __tablename__ = "investigation"
-    __protected__ = ["id", "parent_id"]
+    __protected__ = []
     __relationship__ = ["patient_id"]
 
-    date = db.Column(db.Date())
+    date = db.Column(db.Date(), nullable=False)
+
+    # hiv labs
     antiHIV = db.Column(db.Unicode())
     cd4 = db.Column(db.Integer())
-    pCD4 = db.Column(db.Integer())
+    pCD4 = db.Column(db.Float())
     vl = db.Column(db.Integer())
+
+    # cbc
+    wbc = db.Column(db.Float())
+    hb = db.Column(db.Float())
+    hct = db.Column(db.Float())
+    wbcPNeu = db.Column(db.Float())
+    wbcPLym = db.Column(db.Float())
+    wbcPEos = db.Column(db.Float())
+    wbcPBasos = db.Column(db.Float())
+
+    # bun cr e'lyte
+    bun = db.Column(db.Float())
+    cr = db.Column(db.Float())
+
+    na = db.Column(db.Float())
+    k = db.Column(db.Float())
+    cl = db.Column(db.Float())
+    hco3 = db.Column(db.Float())
+    ca = db.Column(db.Float())
+    mg = db.Column(db.Float())
+    po4 = db.Column(db.Float())
+
+    # fbs
+    fbs = db.Column(db.Integer())
+    hba1c = db.Column(db.Float())
+
+    # ua
+    urine_glucose_dipstick = db.Column(db.Float())
+    urine_prot_dipstick = db.Column(db.Float())
+    urine_glucose = db.Column(db.Float())
+    urine_prot = db.Column(db.Float())
+    urine_cr = db.Column(db.Float())
+
+    # lipid profile
+    chol = db.Column(db.Integer())
+    tg = db.Column(db.Integer())
+    hdl = db.Column(db.Integer())
+    ldl = db.Column(db.Integer())
+
+    # lft
+    total_prot = db.Column(db.Float())
+    albumin = db.Column(db.Float())
+    globulin = db.Column(db.Float())
+    total_bilirubin = db.Column(db.Float())
+    direct_bilirubin = db.Column(db.Float())
+    ast = db.Column(db.Float())
+    alt = db.Column(db.Float())
+    alp = db.Column(db.Float())
+
+    # sy labs
+    tpha = db.Column(db.Unicode())
     vdrl = db.Column(db.Unicode())
     rpr = db.Column(db.Integer())
+
+    # hepatitis serology
     hbsag = db.Column(db.Unicode())
     antiHBs = db.Column(db.Unicode())
     antiHCV = db.Column(db.Unicode())
+
+    # other serology
+    cryptoAgBlood = db.Column(db.Unicode())
+    cryptoAgCSF = db.Column(db.Unicode())
+
+    # tb labs
     ppd = db.Column(db.Integer())
     cxr = db.Column(db.Unicode())
-    tb = db.Column(db.Unicode())
-    hivResistence = db.Column(db.Unicode())
+
+    afb = db.Column(db.Unicode())
+    sputumCulture = db.Column(db.Unicode())
+    dst = db.Column(db.ARRAY(db.Unicode()))
+    geneXpert = db.Column(db.Unicode())
+    lineProbeAssay = db.Column(db.Unicode())
+
+    # hiv mutations
+    hivResistance = db.Column(db.ARRAY(db.Unicode()))
+    hivMutation = db.Column(db.ARRAY(db.Unicode()))
 
     # relationship to parent
     patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"))
@@ -150,7 +225,7 @@ class AppointmentModel(BaseModel):
     """
 
     __tablename__ = "appointment"
-    __protected__ = ["id", "parent_id"]
+    __protected__ = []
     __relationship__ = ["patient_id"]
 
     date = db.Column(db.Date())

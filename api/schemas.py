@@ -25,43 +25,32 @@ class ICD10Schema(BaseSchema):
 
 
 class UserSchema(BaseSchema):
-    username = fields.String(validate=lambda p: len(p) >= 5, required=True)
-    password = fields.String(validate=lambda p: len(p) >= 5, required=True)
+    username = fields.String(validate=validate.Length(min=5), required=True)
+    password = fields.String(validate=validate.Length(min=5), required=True)
 
 
 class VisitSchema(BaseSchema):
     date = fields.Date(required=True)
-    bw = fields.Float(validate=lambda p: 0.0 <= p, missing=None)
-    contactTB = fields.String(
-        validate=validate.OneOf(
-            ["Contacted with TB", "Not Contacted with TB"]
-        ),
-        missing=None,
-    )
+
+    bw = fields.Float(validate=validate.Range(min=0), missing=None)
+    contactTB = fields.String(missing=None)
     adherenceScale = fields.Integer(
-        validate=lambda p: 0 <= p <= 100, missing=None
+        validate=validate.Range(min=0, max=100), missing=None
     )
-    adherenceProblem = fields.String(
-        validate=lambda p: len(p) >= 2, missing=None
+    adherenceProblem = fields.String(missing=None)
+    delayedDosing = fields.Integer(
+        validate=validate.Range(min=0), missing=None
     )
-    delayedDosing = fields.Integer(validate=lambda p: 0 <= p, missing=None)
-    impression = fields.List(fields.String(required=True), required=True)
-    arv = fields.List(
-        fields.String(validate=lambda p: len(p) >= 2, missing=None),
-        missing=None,
+    impression = fields.List(
+        fields.String(required=True),
+        validate=validate.Length(min=1),
+        required=True,
     )
-    oiProphylaxis = fields.List(
-        fields.String(validate=lambda p: len(p) >= 2, missing=None),
-        missing=None,
-    )
-    antiTB = fields.List(
-        fields.String(validate=lambda p: len(p) >= 2, missing=None),
-        missing=None,
-    )
-    vaccination = fields.List(
-        fields.String(validate=lambda p: len(p) >= 2, missing=None),
-        missing=None,
-    )
+    arv = fields.List(fields.String(missing=None), missing=None)
+    whySwitch = fields.String(missing=None)
+    oiProphylaxis = fields.List(fields.String(missing=None), missing=None)
+    antiTB = fields.List(fields.String(missing=None), missing=None)
+    vaccination = fields.List(fields.String(missing=None), missing=None)
 
     # relationship
     patient = fields.Nested(
@@ -71,16 +60,89 @@ class VisitSchema(BaseSchema):
 
 class InvestigationSchema(BaseSchema):
     date = fields.Date(required=True)
+
+    # hiv labs
     antiHIV = fields.String(
         validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None
     )
-    cd4 = fields.Integer(validate=lambda p: 0 <= p, missing=None)
-    pCD4 = fields.Float(validate=lambda p: 0 <= p <= 100, missing=None)
-    vl = fields.Integer(validate=lambda p: 0 <= p, missing=None)
+    cd4 = fields.Integer(validate=validate.Range(min=0), missing=None)
+    pCD4 = fields.Float(validate=validate.Range(min=0, max=100), missing=None)
+    vl = fields.Integer(validate=validate.Range(min=0), missing=None)
+
+    # sy labs
+    tpha = fields.String(
+        validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None
+    )
     vdrl = fields.String(
         validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None
     )
-    rpr = fields.Integer(validate=lambda p: 0 <= p, missing=None)
+    rpr = fields.Integer(validate=validate.Range(min=0), missing=None)
+
+    # cbc
+    wbc = fields.Float(validate=validate.Range(min=0), missing=None)
+    hb = fields.Float(validate=validate.Range(min=0), missing=None)
+    hct = fields.Float(validate=validate.Range(min=0, max=100), missing=None)
+    wbcPNeu = fields.Float(
+        validate=validate.Range(min=0, max=100), missing=None
+    )
+    wbcPLym = fields.Float(
+        validate=validate.Range(min=0, max=100), missing=None
+    )
+    wbcPEos = fields.Float(
+        validate=validate.Range(min=0, max=100), missing=None
+    )
+    wbcPBasos = fields.Float(
+        validate=validate.Range(min=0, max=100), missing=None
+    )
+
+    # bun cr e'lyte
+    bun = fields.Float(validate=validate.Range(min=0), missing=None)
+    cr = fields.Float(validate=validate.Range(min=0), missing=None)
+
+    na = fields.Float(validate=validate.Range(min=0), missing=None)
+    k = fields.Float(validate=validate.Range(min=0), missing=None)
+    cl = fields.Float(validate=validate.Range(min=0), missing=None)
+    hco3 = fields.Float(validate=validate.Range(min=0), missing=None)
+    ca = fields.Float(validate=validate.Range(min=0), missing=None)
+    mg = fields.Float(validate=validate.Range(min=0), missing=None)
+    po4 = fields.Float(validate=validate.Range(min=0), missing=None)
+
+    # fbs
+    fbs = fields.Integer(validate=validate.Range(min=0), missing=None)
+    hba1c = fields.Float(validate=validate.Range(min=0), missing=None)
+
+    # ua
+    urine_glucose_dipstick = fields.Float(
+        validate=validate.Range(min=0), missing=None
+    )
+    urine_prot_dipstick = fields.Float(
+        validate=validate.Range(min=0), missing=None
+    )
+    urine_glucose = fields.Float(validate=validate.Range(min=0), missing=None)
+    urine_prot = fields.Float(validate=validate.Range(min=0), missing=None)
+    urine_cr = fields.Float(validate=validate.Range(min=0), missing=None)
+
+    # lipid profile
+    chol = fields.Integer(validate=validate.Range(min=0), missing=None)
+    tg = fields.Integer(validate=validate.Range(min=0), missing=None)
+    hdl = fields.Integer(validate=validate.Range(min=0), missing=None)
+    ldl = fields.Integer(validate=validate.Range(min=0), missing=None)
+
+    # lft
+    total_prot = fields.Float(validate=validate.Range(min=0), missing=None)
+    albumin = fields.Float(validate=validate.Range(min=0), missing=None)
+    globulin = fields.Float(validate=validate.Range(min=0), missing=None)
+    total_bilirubin = fields.Float(
+        validate=validate.Range(min=0), missing=None
+    )
+    direct_bilirubin = fields.Float(
+        validate=validate.Range(min=0), missing=None
+    )
+    alt = fields.Float(validate=validate.Range(min=0), missing=None)
+    ast = fields.Float(validate=validate.Range(min=0), missing=None)
+    alp = fields.Float(validate=validate.Range(min=0), missing=None)
+
+    # hepatitis serology
     hbsag = fields.String(
         validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None
     )
@@ -90,23 +152,40 @@ class InvestigationSchema(BaseSchema):
     antiHCV = fields.String(
         validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None
     )
-    ppd = fields.Integer(validate=lambda p: 0 <= p, missing=None)
-    cxr = fields.String(validate=lambda p: len(p) >= 2, missing=None)
-    tb = fields.String(
-        validate=validate.OneOf(
-            [
-                "AFB +",
-                "Culture + for MTB",
-                "GeneXpert + for MTB",
-                "GeneXpert + for Rifampicin Resistance MTB",
-                "Negative",
-            ]
-        ),
+
+    # other serology
+    cryptoAgBlood = fields.String(
+        validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None
+    )
+    cryptoAgCSF = fields.String(
+        validate=validate.OneOf(["+ ve", "- ve", "?"]), missing=None
+    )
+
+    # hiv mutations
+    hivResistance = fields.List(
+        fields.String(required=True),
+        validate=validate.Length(min=0),
         missing=None,
     )
-    hivResistence = fields.String(
-        validate=lambda p: len(p) >= 2, missing=None
+    hivMutation = fields.List(
+        fields.String(required=True),
+        validate=validate.Length(min=0),
+        missing=None,
     )
+
+    # tb labs
+    ppd = fields.Integer(validate=validate.Range(min=0), missing=None)
+    cxr = fields.String(missing=None)
+
+    afb = fields.String(missing=None)
+    sputumCulture = fields.String(missing=None)
+    dst = fields.List(
+        fields.String(required=True),
+        validate=validate.Length(min=0),
+        missing=None,
+    )
+    geneXpert = fields.String(missing=None)
+    lineProbeAssay = fields.String(missing=None)
 
     # relationship
     patient = fields.Nested(
@@ -116,9 +195,7 @@ class InvestigationSchema(BaseSchema):
 
 class AppointmentSchema(BaseSchema):
     date = fields.Date(required=True)
-    appointmentFor = fields.String(
-        validate=lambda p: len(p) >= 2, required=True
-    )
+    appointmentFor = fields.String(required=True)
 
     # relationship
     patient = fields.Nested(
@@ -127,23 +204,21 @@ class AppointmentSchema(BaseSchema):
 
 
 class PatientSchema(BaseSchema):
-    hn = fields.String(validate=lambda p: len(p) >= 2, required=True)
-    gid = fields.String(validate=lambda p: len(p) >= 2, missing=None)
-    cid = fields.String(validate=lambda p: len(p) >= 2, missing=None)
-    nap = fields.String(validate=lambda p: len(p) >= 2, missing=None)
-    name = fields.String(validate=lambda p: len(p) >= 2, required=True)
+    hn = fields.String(required=True)
+    gid = fields.String(missing=None)
+    cid = fields.String(missing=None)
+    nap = fields.String(missing=None)
+    name = fields.String(required=True)
     dob = fields.Date(required=True)
     sex = fields.String(
-        validate=validate.OneOf(["ชาย", "หญิง", "-"]), required=True
+        validate=validate.OneOf(["ชาย", "หญิง"]), required=True
     )
     gender = fields.String(
-        validate=validate.OneOf(
-            ["Heterosexual", "Homosexual", "Lesbian", "Bisexual", "-"]
-        ),
+        validate=validate.OneOf(["Heterosexual", "Homosexual", "Bisexual"]),
         missing=None,
     )
     marital = fields.String(
-        validate=validate.OneOf(["โสด", "สมรส", "ม่าย", "-"]), missing=None
+        validate=validate.OneOf(["โสด", "สมรส", "ม่าย"]), missing=None
     )
     nationality = fields.String(missing=None)
     payer = fields.String(
@@ -155,7 +230,6 @@ class PatientSchema(BaseSchema):
                 "ประกันสังคมต่าง รพ.",
                 "ข้าราชการ/จ่ายตรง",
                 "ต่างด้าว",
-                "ชำระเงิน",
             ]
         ),
         required=True,
@@ -170,7 +244,7 @@ class PatientSchema(BaseSchema):
         ),
         required=True,
     )
-    referFrom = fields.String(validate=lambda p: len(p) >= 2, missing=None)
+    referFrom = fields.String(missing=None)
     education = fields.String(
         validate=validate.OneOf(
             [
@@ -180,20 +254,13 @@ class PatientSchema(BaseSchema):
                 "ปริญญาตรี",
                 "ปริญญาโท",
                 "ปริญญาเอก",
-                "-",
             ]
         ),
         missing=None,
     )
-    tel = fields.List(
-        fields.String(missing=None, validate=lambda p: len(p) >= 1),
-        missing=None,
-    )
-    relative_tel = fields.List(
-        fields.String(missing=None, validate=lambda p: len(p) >= 1),
-        missing=None,
-    )
-    address = fields.String(validate=lambda p: len(p) >= 2, missing=None)
+    tel = fields.List(fields.String(missing=None), missing=None)
+    relative_tel = fields.List(fields.String(missing=None), missing=None)
+    address = fields.String(missing=None)
 
     # relationship
     visits = fields.Nested(VisitSchema, many=True)
