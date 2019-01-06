@@ -57,9 +57,6 @@ class ChildHandler(Resource):
             child_data = patient.appointments
 
         else:
-            child_data = None
-
-        if child_data is None:
             return jsonify([])
 
         # serialize model
@@ -84,16 +81,32 @@ class ChildHandler(Resource):
         else:
             hn = str(hn).replace("_", "/")
 
-        patient = PatientModel.query.filter(PatientModel.hn == hn).first()
+        old_child = (
+            PatientModel.query.filter(PatientModel.hn == hn)
+            .filter(model_object.date == args["date"])
+            .first()
+        )
 
-        if patient is None:
-            abort(422)
+        if not old_child:
+            patient = PatientModel.query.filter(PatientModel.hn == hn).first()
 
-        # insert new data
-        child_data = model_object(**args)
-        child_data.patient_id = patient.id
+            if patient is None:
+                abort(422)
 
-        db.session.add(child_data)
+            # insert new data
+            child_data = model_object(**args)
+            child_data.patient_id = patient.id
+
+            db.session.add(child_data)
+
+        else:
+            old_record = (
+                model_object.query.filter(model_object.date == args["date"])
+                .filter(model_object.patient_id == old_child.id)
+                .first()
+            )
+            old_record.update(**args)
+
         db.session.commit()
 
         return jsonify({"message": "OK"})
