@@ -81,18 +81,23 @@ class ChildHandler(Resource):
         else:
             hn = str(hn).replace("_", "/")
 
-        old_child = (
-            PatientModel.query.filter(PatientModel.hn == hn)
-            .filter(model_object.date == args["date"])
-            .first()
-        )
+        patient = PatientModel.query.filter(PatientModel.hn == hn).first()
 
-        if not old_child:
-            patient = PatientModel.query.filter(PatientModel.hn == hn).first()
+        if patient is None:
+            abort(422)
 
-            if patient is None:
-                abort(422)
+        # find old record
+        if args["id"]:
+            old_record = (
+                model_object.query
+                .filter(model_object.patient_id == patient.id)
+                .filter(model_object.id == args["id"])
+                .first()
+            )
+        else:
+            old_record = None
 
+        if not old_record:
             # insert new data
             child_data = model_object(**args)
             child_data.patient_id = patient.id
@@ -100,12 +105,8 @@ class ChildHandler(Resource):
             db.session.add(child_data)
 
         else:
-            old_record = (
-                model_object.query.filter(model_object.date == args["date"])
-                .filter(model_object.patient_id == old_child.id)
-                .first()
-            )
             old_record.update(**args)
+            db.session.add(old_record)
 
         db.session.commit()
 

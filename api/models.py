@@ -15,6 +15,9 @@ class BaseModel(db.Model):
     def __str__(self):
         return str(self.__repr__)
 
+    def allKeys(self):
+        return list(vars(self).keys())
+
     def update(self, **kwargs):
         """
         Update column using the provided dictionary
@@ -25,7 +28,7 @@ class BaseModel(db.Model):
             "timestamp",
             "modify_timestamp",
         ]
-        all_keys = list(vars(self).keys())
+        all_keys = self.allKeys()
 
         for key in all_keys:
             if (

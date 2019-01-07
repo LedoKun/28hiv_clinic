@@ -30,6 +30,7 @@ class UserSchema(BaseSchema):
 
 
 class VisitSchema(BaseSchema):
+    id = fields.String(missing=None)
     date = fields.Date(required=True)
 
     bw = fields.Float(validate=validate.Range(min=0), missing=None)
@@ -59,6 +60,7 @@ class VisitSchema(BaseSchema):
 
 
 class InvestigationSchema(BaseSchema):
+    id = fields.String(missing=None)
     date = fields.Date(required=True)
 
     # hiv labs
@@ -194,6 +196,7 @@ class InvestigationSchema(BaseSchema):
 
 
 class AppointmentSchema(BaseSchema):
+    id = fields.String(missing=None)
     date = fields.Date(required=True)
     appointmentFor = fields.String(required=True)
 
