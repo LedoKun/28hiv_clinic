@@ -214,14 +214,14 @@ class PatientSchema(BaseSchema):
     name = fields.String(required=True)
     dob = fields.Date(required=True)
     sex = fields.String(
-        validate=validate.OneOf(["ชาย", "หญิง"]), required=True
+        validate=validate.OneOf(["ชาย", "หญิง", "-"]), required=True
     )
     gender = fields.String(
-        validate=validate.OneOf(["Heterosexual", "Homosexual", "Bisexual"]),
+        validate=validate.OneOf(["Heterosexual", "Homosexual", "Bisexual", "-"]),
         missing=None,
     )
     marital = fields.String(
-        validate=validate.OneOf(["โสด", "สมรส", "ม่าย"]), missing=None
+        validate=validate.OneOf(["โสด", "สมรส", "ม่าย", "หย่า", "-"]), missing=None
     )
     nationality = fields.String(missing=None)
     payer = fields.String(
@@ -257,6 +257,7 @@ class PatientSchema(BaseSchema):
                 "ปริญญาตรี",
                 "ปริญญาโท",
                 "ปริญญาเอก",
+                "-"
             ]
         ),
         missing=None,
