@@ -150,6 +150,7 @@ class InvestigationModel(BaseModel):
     wbcPLym = db.Column(db.Float())
     wbcPEos = db.Column(db.Float())
     wbcPBasos = db.Column(db.Float())
+    wbcPMono = db.Column(db.Float())
 
     # bun cr e'lyte
     bun = db.Column(db.Float())
@@ -171,8 +172,7 @@ class InvestigationModel(BaseModel):
     urine_glucose_dipstick = db.Column(db.Float())
     urine_prot_dipstick = db.Column(db.Float())
     urine_glucose = db.Column(db.Float())
-    urine_prot = db.Column(db.Float())
-    urine_cr = db.Column(db.Float())
+    urine_prot_cr_ratio = db.Column(db.Float())
 
     # lipid profile
     chol = db.Column(db.Integer())

@@ -96,6 +96,9 @@ class InvestigationSchema(BaseSchema):
     wbcPBasos = fields.Float(
         validate=validate.Range(min=0, max=100), missing=None
     )
+    wbcPMono = fields.Float(
+        validate=validate.Range(min=0, max=100), missing=None
+    )
 
     # bun cr e'lyte
     bun = fields.Float(validate=validate.Range(min=0), missing=None)
@@ -121,8 +124,9 @@ class InvestigationSchema(BaseSchema):
         validate=validate.Range(min=0), missing=None
     )
     urine_glucose = fields.Float(validate=validate.Range(min=0), missing=None)
-    urine_prot = fields.Float(validate=validate.Range(min=0), missing=None)
-    urine_cr = fields.Float(validate=validate.Range(min=0), missing=None)
+    urine_prot_cr_ratio = fields.Float(
+        validate=validate.Range(min=0), missing=None
+    )
 
     # lipid profile
     chol = fields.Integer(validate=validate.Range(min=0), missing=None)
@@ -217,11 +221,14 @@ class PatientSchema(BaseSchema):
         validate=validate.OneOf(["ชาย", "หญิง", "-"]), required=True
     )
     gender = fields.String(
-        validate=validate.OneOf(["Heterosexual", "Homosexual", "Bisexual", "-"]),
+        validate=validate.OneOf(
+            ["Heterosexual", "Homosexual", "Bisexual", "-"]
+        ),
         missing=None,
     )
     marital = fields.String(
-        validate=validate.OneOf(["โสด", "สมรส", "ม่าย", "หย่า", "-"]), missing=None
+        validate=validate.OneOf(["โสด", "สมรส", "ม่าย", "หย่า", "-"]),
+        missing=None,
     )
     nationality = fields.String(missing=None)
     payer = fields.String(
@@ -257,7 +264,7 @@ class PatientSchema(BaseSchema):
                 "ปริญญาตรี",
                 "ปริญญาโท",
                 "ปริญญาเอก",
-                "-"
+                "-",
             ]
         ),
         missing=None,
