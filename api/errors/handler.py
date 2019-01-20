@@ -12,7 +12,7 @@ from webargs.flaskparser import parser
 import sys
 
 
-@bp.app_errorhandler(Exception)
+# @bp.app_errorhandler(Exception)
 def error_handler(error):
     """
     Standard Error Handler
@@ -29,7 +29,7 @@ def error_handler(error):
 
     elif isinstance(error, ValidationError):
         error_payload = {
-            "statusCode": error.status_code,
+            "statusCode": 422,
             "name": "Form Validation Error",
             "description": str(error),
         }
@@ -45,6 +45,6 @@ def error_handler(error):
 
 
 # This error handler is necessary for usage with Flask-RESTful
-@parser.error_handler
-def handle_parse_error(error, req, schema):
+# @parser.error_handler
+def handle_parse_error(error, req, schema, status_code, headers):
     error_handler(error)

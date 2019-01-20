@@ -240,6 +240,7 @@ class PatientSchema(BaseSchema):
                 "ประกันสังคมต่าง รพ.",
                 "ข้าราชการ/จ่ายตรง",
                 "ต่างด้าว",
+                "ชำระเงิน",
             ]
         ),
         required=True,
