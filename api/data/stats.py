@@ -27,12 +27,14 @@ class Stats(Resource):
                 "df_non_thai_groupby_payer": patients.getPayerDF(
                     exclude=["Thailand"]
                 ),
+                "df_count_patient_status": patients.getCount(
+                    fieldName=["nationality", "patientStatus"],
+                    name=["Nationality"],
+                ),
                 "df_isRefer": patients.getRefferalDF(),
                 "df_new_patient_by_months": visits.getNewPatientsByMonth(),
                 "df_all_visits_by_months": visits.getVisitsByMonth(),
-                "df_arv": visits.getCount(
-                    fieldName=["arv"], name="Regimens"
-                ),
+                "df_arv": visits.getCount(fieldName=["arv"], name="Regimens"),
                 "df_antiTB": visits.getCount(
                     fieldName=["antiTB"], name="Regimens"
                 ),
