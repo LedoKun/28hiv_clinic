@@ -31,14 +31,12 @@ class IxStats:
         # keep only last cd4 info per patient
         df_data.dropna(subset=["cd4"])
         self.df_last = self.df_cleaned.drop_duplicates(
-            subset=["cd4"], keep="last"
+            subset=["patient_id"], keep="last"
         )
 
-        df_groupby_cd4 = (
-            df_data.groupby(["cd4", pd.cut(df_data.cd4, bins)])
-            .size()
-            .unstack()
-        )
+        df_groupby_cd4 = df_data.groupby(
+            ["cd4", pd.cut(df_data.cd4, bins)]
+        ).size()
 
         # sort columns' name
         df_groupby_cd4.sort_index(axis=1, inplace=True)
