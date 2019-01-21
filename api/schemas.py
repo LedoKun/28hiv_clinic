@@ -215,6 +215,20 @@ class PatientSchema(BaseSchema):
     gid = fields.String(missing=None)
     cid = fields.String(missing=None)
     nap = fields.String(missing=None)
+    patientStatus = fields.String(
+        validate=validate.OneOf(
+            [
+                "รักษาต่อเนื่อง",
+                "ส่งตัว/รับการรักษาที่สภานพยาบาลอื่น ในประเทศไทย",
+                "ส่งตัว/รับการรักษาที่สภานพยาบาลอื่น ในต่างประเทศ",
+                "ถูกส่งกลับประเทศ",
+                "ขาดการติดต่อ",
+                "เสียชีวิต",
+            ]
+        ),
+        missing="รักษาต่อเนื่อง",
+        default="รักษาต่อเนื่อง"
+    )
     name = fields.String(required=True)
     dob = fields.Date(required=True)
     sex = fields.String(

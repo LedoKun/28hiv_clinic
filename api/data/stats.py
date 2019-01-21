@@ -7,7 +7,7 @@ from api.utils.stats.visits import VisitStats
 
 
 class Stats(Resource):
-    # @jwt_required
+    @jwt_required
     def get(Resource):
         patients = PatientStats()
         visits = VisitStats()

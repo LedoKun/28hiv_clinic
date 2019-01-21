@@ -61,6 +61,7 @@ class PatientModel(BaseModel):
     gid = db.Column(db.Unicode())
     cid = db.Column(db.Unicode())
     nap = db.Column(db.Unicode())
+    patientStatus = db.Column(db.Unicode())
     name = db.Column(db.Unicode())
     dob = db.Column(db.Date())
     sex = db.Column(db.Unicode())
