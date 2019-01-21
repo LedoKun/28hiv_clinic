@@ -34,9 +34,11 @@ class IxStats:
             subset=["patient_id"], keep="last"
         )
 
-        df_groupby_cd4 = df_data.groupby(
-            ["cd4", pd.cut(df_data.cd4, bins)]
-        ).size()
+        df_groupby_cd4 = (
+            df_data.groupby(["cd4", pd.cut(df_data.cd4, bins)])
+            .size()
+            .unstack()
+        )
 
         # sort columns' name
         df_groupby_cd4.sort_index(axis=1, inplace=True)
