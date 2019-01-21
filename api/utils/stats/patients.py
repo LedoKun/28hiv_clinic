@@ -117,17 +117,17 @@ class PatientStats:
             return None
 
     def getCount(self, fieldName=[], name=["รายการ"]):
-        # try:
-        df_count = self.df_cleaned.groupby(fieldName).size().unstack()
+        try:
+            df_count = self.df_cleaned.groupby(fieldName).size().unstack()
 
-        # sort columns' name
-        df_count.sort_index(axis=1, inplace=True)
+            # sort columns' name
+            df_count.sort_index(axis=1, inplace=True)
 
-        # rename columns
-        df_count.columns.rename("Status", inplace=True)
-        df_count.index.names = name
+            # rename columns
+            df_count.columns.rename("Status", inplace=True)
+            df_count.index.names = name
 
-        return df_count
+            return df_count
 
-        # except (AttributeError, ValueError, KeyError):
-        #     return None
+        except (AttributeError, ValueError, KeyError):
+            return None

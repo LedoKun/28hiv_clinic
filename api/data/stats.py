@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required
 
 from api.utils.stats.patients import PatientStats
 from api.utils.stats.visits import VisitStats
+from api.utils.stats.investigation import IxStats
 
 
 class Stats(Resource):
@@ -11,6 +12,7 @@ class Stats(Resource):
     def get(Resource):
         patients = PatientStats()
         visits = VisitStats()
+        ix = IxStats()
 
         return jsonify(
             {
@@ -47,5 +49,7 @@ class Stats(Resource):
                 "df_vaccination": visits.getCountEach(
                     dfField=["vaccination"], name="Vaccine"
                 ),
+                "df_init_cd4": ix.getCD4(isInit=True),
+                "df_cd4": ix.getCD4(isInit=False),
             }
         )
