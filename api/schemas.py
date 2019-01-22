@@ -229,6 +229,7 @@ class PatientSchema(BaseSchema):
         missing="รักษาต่อเนื่อง",
         default="รักษาต่อเนื่อง"
     )
+    referOutTo = fields.String(missing=None)
     name = fields.String(required=True)
     dob = fields.Date(required=True)
     sex = fields.String(
