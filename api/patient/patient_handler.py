@@ -29,9 +29,15 @@ class PatientHandler(Resource):
         if not args:
             abort(422)
 
-        patient = PatientModel.query.filter(
-            PatientModel.hn == args["hn"]
-        ).first()
+        if args["id"]:
+            patient = PatientModel.query.filter(
+                PatientModel.id == args["id"]
+            ).first()
+
+        else:
+            patient = PatientModel.query.filter(
+                PatientModel.hn == args["hn"]
+            ).first()
 
         if patient is None:
             # Insert new data

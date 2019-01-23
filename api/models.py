@@ -59,7 +59,7 @@ class PatientModel(BaseModel):
 
     hn = db.Column(db.Unicode(), unique=True)
     gid = db.Column(db.Unicode())
-    cid = db.Column(db.Unicode())
+    cid = db.Column(db.Unicode(), unique=True)
     nap = db.Column(db.Unicode())
     patientStatus = db.Column(db.Unicode())
     referOutTo = db.Column(db.Unicode())
