@@ -6,6 +6,8 @@ from flask import current_app
 
 class BaseModel(db.Model):
     __abstract__ = True
+    __protected__ = []
+    __relationship__ = []
 
     def __repr__(self):
         return "<BaseModel(name={self.__class__.__name__!r})>".format(
@@ -54,7 +56,6 @@ class PatientModel(BaseModel):
     """
 
     __tablename__ = "patient"
-    __protected__ = ["hn"]
     __relationship__ = ["visits", "investigations", "appointments"]
 
     hn = db.Column(db.Unicode(), unique=True)
@@ -107,7 +108,6 @@ class VisitModel(BaseModel):
     """
 
     __tablename__ = "visit"
-    __protected__ = []
     __relationship__ = ["patient_id"]
 
     date = db.Column(db.Date())
@@ -133,7 +133,6 @@ class InvestigationModel(BaseModel):
     """
 
     __tablename__ = "investigation"
-    __protected__ = []
     __relationship__ = ["patient_id"]
 
     date = db.Column(db.Date(), nullable=False)
@@ -230,7 +229,6 @@ class AppointmentModel(BaseModel):
     """
 
     __tablename__ = "appointment"
-    __protected__ = []
     __relationship__ = ["patient_id"]
 
     date = db.Column(db.Date())
