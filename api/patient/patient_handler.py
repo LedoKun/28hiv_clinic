@@ -29,7 +29,7 @@ class PatientHandler(Resource):
         if not args:
             abort(422)
 
-        if args["id"]:
+        if "id" in args:
             patient = PatientModel.query.filter(
                 PatientModel.id == args["id"]
             ).first()
