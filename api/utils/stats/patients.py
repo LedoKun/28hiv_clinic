@@ -111,6 +111,9 @@ class PatientStats:
             df_isRefer.columns.rename("ส่งตัวจาก", inplace=True)
             df_isRefer.index.names = ["Sex", "Gender", "สถานะการส่งตัว"]
 
+            # transpose table
+            df_isRefer = df_isRefer.T
+
             return df_isRefer
 
         except (ValueError, AttributeError):
