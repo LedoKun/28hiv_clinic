@@ -4,12 +4,14 @@ Replace default error handlers with JSON equivalents
 Add additional error handlers as needed
 """
 
-from api.errors import bp
-from werkzeug.exceptions import HTTPException
-from webargs.core import ValidationError
+import sys
+
+# from webargs.core import ValidationError
 from flask.json import jsonify
 from webargs.flaskparser import parser
-import sys
+from werkzeug.exceptions import HTTPException
+
+from api.errors import bp
 
 
 @bp.app_errorhandler(Exception)
@@ -27,12 +29,12 @@ def error_handler(error):
             "description": error.description,
         }
 
-    elif isinstance(error, ValidationError):
-        error_payload = {
-            "statusCode": 422,
-            "name": "Form Validation Error",
-            "description": str(error),
-        }
+    # elif isinstance(error, ValidationError):
+    #     error_payload = {
+    #         "statusCode": 422,
+    #         "name": "Form Validation Error",
+    #         "description": str(error),
+    #     }
 
     else:
         error_payload = {
@@ -46,5 +48,5 @@ def error_handler(error):
 
 # This error handler is necessary for usage with Flask-RESTful
 @parser.error_handler
-def handle_parse_error(error, req, schema, status_code, headers):
-    error_handler(error)
+def handle_parse_error(error, req, schema, status_code=None, headers=None):
+    raise HTTPException(description=str(error), response=422)

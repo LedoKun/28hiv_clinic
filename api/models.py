@@ -2,6 +2,7 @@ from datetime import datetime
 from passlib.hash import bcrypt
 from api import db
 from flask import current_app
+from sqlalchemy.dialects.postgresql import ARRAY
 
 
 class BaseModel(db.Model):
@@ -74,8 +75,8 @@ class PatientModel(BaseModel):
     isRefer = db.Column(db.Unicode())
     referFrom = db.Column(db.Unicode())
     education = db.Column(db.Unicode())
-    tel = db.Column(db.ARRAY(db.Unicode()))
-    relative_tel = db.Column(db.ARRAY(db.Unicode()))
+    tel = db.Column(ARRAY(db.Unicode()))
+    relative_tel = db.Column(ARRAY(db.Unicode()))
     address = db.Column(db.Unicode())
 
     # relationship
@@ -116,12 +117,12 @@ class VisitModel(BaseModel):
     adherenceScale = db.Column(db.Integer())
     adherenceProblem = db.Column(db.Unicode())
     delayedDosing = db.Column(db.Integer())
-    impression = db.Column(db.ARRAY(db.Unicode()))
-    arv = db.Column(db.ARRAY(db.Unicode()))
+    impression = db.Column(ARRAY(db.Unicode()))
+    arv = db.Column(ARRAY(db.Unicode()))
     whySwitch = db.Column(db.Unicode())
-    oiProphylaxis = db.Column(db.ARRAY(db.Unicode()))
-    antiTB = db.Column(db.ARRAY(db.Unicode()))
-    vaccination = db.Column(db.ARRAY(db.Unicode()))
+    oiProphylaxis = db.Column(ARRAY(db.Unicode()))
+    antiTB = db.Column(ARRAY(db.Unicode()))
+    vaccination = db.Column(ARRAY(db.Unicode()))
 
     # relationship to parent
     patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"))
@@ -211,13 +212,13 @@ class InvestigationModel(BaseModel):
 
     afb = db.Column(db.Unicode())
     sputumCulture = db.Column(db.Unicode())
-    dst = db.Column(db.ARRAY(db.Unicode()))
+    dst = db.Column(ARRAY(db.Unicode()))
     geneXpert = db.Column(db.Unicode())
     lineProbeAssay = db.Column(db.Unicode())
 
     # hiv mutations
-    hivResistance = db.Column(db.ARRAY(db.Unicode()))
-    hivMutation = db.Column(db.ARRAY(db.Unicode()))
+    hivResistance = db.Column(ARRAY(db.Unicode()))
+    hivMutation = db.Column(ARRAY(db.Unicode()))
 
     # relationship to parent
     patient_id = db.Column(db.Integer, db.ForeignKey("patient.id"))

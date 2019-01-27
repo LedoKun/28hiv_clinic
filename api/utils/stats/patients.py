@@ -52,7 +52,7 @@ class PatientStats:
 
     def getAgeSexGenderDF(self, include=[], exclude=[]):
         try:
-            bins = np.arange(-10, 110, 10)
+            bins = np.arange(0, 110, 10)
             df_data = self.filteredNationalities(
                 include=include, exclude=exclude
             )

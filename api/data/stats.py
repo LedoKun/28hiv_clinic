@@ -1,9 +1,10 @@
 from flask import jsonify
-from flask_restful import Resource
 from flask_jwt_extended import jwt_required
+from flask_restful import Resource
 
 from api.utils.stats.patients import PatientStats
 from api.utils.stats.visits import VisitStats
+
 # from api.utils.stats.investigation import IxStats
 
 
@@ -37,6 +38,7 @@ class Stats(Resource):
                 "df_new_patient_by_months": visits.getNewPatientsByMonth(),
                 "df_all_visits_by_months": visits.getVisitsByMonth(),
                 "df_arv": visits.getCount(fieldName=["arv"], name="Regimens"),
+                "days_start_arv_yearly": visits.getDaysToStartARV(),
                 "df_antiTB": visits.getCount(
                     fieldName=["antiTB"], name="Regimens"
                 ),

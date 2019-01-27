@@ -1,13 +1,18 @@
-from api import db
-from api.models import VisitModel
-import pandas as pd
 from collections import Counter
+
+import pandas as pd
+from sqlalchemy.orm import joinedload
+
+from api import db
+from api.models import PatientModel, VisitModel
+from api.schemas import VisitSchema
 
 
 class VisitStats:
     df_raw = None
     df_cleaned = None
     df_last = None
+    df_days_until_arv = None
 
     def __init__(self):
         self.df_raw = pd.io.sql.read_sql(
@@ -138,6 +143,157 @@ class VisitStats:
 
         return count_df
 
-    # TODO
-    def getLengthUntilFirstARV(self):
-        pass
+    def get_start_dates_df(self):
+        try:
+            if self.df_days_until_arv and not self.df_days_until_arv.empty:
+                return self.df_days_until_arv
+
+            # get visit for patients that haven't
+            # started ARV but was Dx with B20
+            query = (
+                db.session.query(VisitModel)
+                .options(joinedload("patient", innerjoin=True))
+                .filter(
+                    PatientModel.patientStatus
+                    != "ผู้ป่วยรับโอน (เริ่ม ARV แล้ว)"
+                )
+                .filter(
+                    VisitModel.impression.any(
+                        "B20 - Human immunodeficiency virus [HIV] disease"
+                    )
+                )
+                .all()
+            )
+
+            visit_schema = VisitSchema(
+                many=True, only=("date", "arv", "patient_id")
+            )
+            query_results = visit_schema.dump(query).data
+
+            # get first visit, arv start date and calculate time length
+            results = {}
+
+            for row in query_results:
+                patient_id = row["patient_id"]
+
+                # add new entry
+                if patient_id not in results:
+                    results[patient_id] = {
+                        "first_visit": None,
+                        "start_arv": None,
+                    }
+
+                if (
+                    results[patient_id]["start_arv"]
+                    and results[patient_id]["first_visit"]
+                ):
+                    continue
+
+                elif not row["arv"] and not results[patient_id]["first_visit"]:
+                    results[patient_id]["first_visit"] = row["date"]
+
+                elif row["arv"] and not results[patient_id]["start_arv"]:
+                    results[patient_id]["start_arv"] = row["date"]
+
+            results_df = pd.DataFrame.from_dict(results, orient="index")
+
+            # convert to date object
+            results_df["first_visit"] = pd.to_datetime(
+                results_df["first_visit"]
+            )
+            results_df["start_arv"] = pd.to_datetime(results_df["start_arv"])
+
+            # calculate timedelta
+            results_df["time_delta"] = (
+                results_df["start_arv"] - results_df["first_visit"]
+            )
+
+            # get year of first visit
+            results_df["year"] = results_df["first_visit"].dt.year
+
+            # save the df for later use
+            self.df_days_until_arv = results_df
+
+            return results_df
+
+        except (AttributeError, ValueError, KeyError):
+            return None
+
+    def days_to_start_arv_df(self, df_data):
+        if df_data is None or df_data.empty:
+            return None
+
+        # drop all rows that have none & drop uneeded columns
+        df_data = df_data.dropna(how="any")
+
+        bins = [
+            pd.Timedelta(weeks=0),
+            pd.Timedelta(weeks=1),
+            pd.Timedelta(weeks=2),
+            pd.Timedelta(weeks=3),
+            pd.Timedelta(weeks=4),
+            pd.Timedelta(weeks=100),
+        ]
+
+        labels = [
+            "0-7 Days",
+            "8-14 Days",
+            "15-21 Days",
+            "22-28 Days",
+            "29+ Days",
+        ]
+
+        # bin and count
+        # df_data.loc[:, "bins"] = pd.cut(
+        #     df_data.loc[:, "time_delta"], bins, labels=labels
+        # )
+        df_data["bins"] = pd.cut(df_data["time_delta"], bins, labels=labels)
+        df_binned_timedelta = df_data.groupby(df_data["bins"]).count()
+
+        # rename columns
+        df_binned_timedelta.columns = ["จำนวน"]
+        df_binned_timedelta.index.names = ["ช่วงเวลา"]
+
+        # other stats
+        arv_start_stats = pd.DataFrame(df_data.describe())
+        arv_start_stats.columns = ["จำนวนวัน"]
+
+        return {
+            "df_binned_timedelta": df_binned_timedelta,
+            "df_describe": arv_start_stats,
+        }
+
+    def getDaysToStartARV(self):
+        df_data = self.get_start_dates_df()
+        min_year = df_data.year.min()
+        max_year = df_data.year.max()
+
+        results = []
+
+        # bin each year data
+        for year in range(min_year, max_year + 1):
+            try:
+                df_year = df_data[df_data.year == year]
+
+                result = self.days_to_start_arv_df(
+                    df_data=df_year[["time_delta"]]
+                )
+                result["header"] = str(year) + " - Days To Start ARV"
+
+                results.append(result)
+            except (AttributeError, ValueError, KeyError):
+                continue
+
+        # bin overall data
+        try:
+            overall = self.days_to_start_arv_df(
+                df_data=df_data[["time_delta"]]
+            )
+            overall["header"] = "Overall" + " - Days To Start ARV"
+
+        except (AttributeError, ValueError, KeyError):
+            pass
+
+        results.append(overall)
+
+        return results
