@@ -3,7 +3,10 @@ from api.config import Config
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
+import pandas as pd
 
+# default='warn'
+pd.options.mode.chained_assignment = None
 
 db = SQLAlchemy()
 migrate = Migrate()

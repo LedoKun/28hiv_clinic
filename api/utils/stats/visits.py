@@ -243,10 +243,6 @@ class VisitStats:
             "29+ Days",
         ]
 
-        # bin and count
-        # df_data.loc[:, "bins"] = pd.cut(
-        #     df_data.loc[:, "time_delta"], bins, labels=labels
-        # )
         df_data["bins"] = pd.cut(df_data["time_delta"], bins, labels=labels)
         df_binned_timedelta = df_data.groupby(df_data["bins"]).count()
 
@@ -278,7 +274,7 @@ class VisitStats:
                 result = self.days_to_start_arv_df(
                     df_data=df_year[["time_delta"]]
                 )
-                result["header"] = str(year) + " - Days To Start ARV"
+                result["header"] = str(year) + " - Number of Days To Start ARV"
 
                 results.append(result)
             except (AttributeError, ValueError, KeyError):
