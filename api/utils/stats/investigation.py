@@ -45,9 +45,11 @@ class IxStats:
             bins = np.array([0, 50, 100, 200, 350, 5000])
             labels = ["0 - 50", "51 - 100", "101 - 200", "201 - 350", "> 350"]
 
-            df_data.loc[:, "cd4"] = df_data.loc[:, "cd4"].astype(
-                float, errors="ignore"
-            )
+            
+            df_data["cd4"] = pd.to_numeric(df_data["cd4"], errors='coerce')
+#             df_data.loc[:, "cd4"] = df_data.loc[:, "cd4"].astype(
+#                 float, errors="ignore"
+#             )
             df_data.loc[:, "bins"] = pd.cut(
                 df_data.loc[:, "cd4"], bins, labels=labels
             )
