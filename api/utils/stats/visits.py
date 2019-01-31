@@ -1,5 +1,4 @@
 from collections import Counter
-import datetime
 
 import pandas as pd
 from sqlalchemy.orm import joinedload
@@ -156,7 +155,7 @@ class VisitStats:
                 .options(joinedload("patient", innerjoin=True))
                 .filter(
                     PatientModel.patientStatus
-                    != "ผู้ป่วยรับโอน (เริ่ม ARV แล้ว)"
+                    != "ผู้ป่วยรับโอน (ยังไม่เริ่ม ARV)"
                 )
                 .filter(
                     VisitModel.impression.any(
