@@ -261,8 +261,8 @@ class VisitStats:
 
     def getDaysToStartARV(self):
         df_data = self.get_start_dates_df()
-        min_year = df_data.year.min()
-        max_year = df_data.year.max()
+        min_year = int(df_data.year.min().item())
+        max_year = int(df_data.year.max().item())
 
         results = []
 
