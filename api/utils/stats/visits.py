@@ -1,4 +1,5 @@
 from collections import Counter
+import datetime
 
 import pandas as pd
 from sqlalchemy.orm import joinedload
@@ -162,6 +163,7 @@ class VisitStats:
                         "B20 - Human immunodeficiency virus [HIV] disease"
                     )
                 )
+                .order_by(VisitModel.date.asc())
                 .all()
             )
 
