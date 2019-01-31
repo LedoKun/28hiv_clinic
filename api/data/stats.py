@@ -50,7 +50,7 @@ class Stats(Resource):
                 "df_vaccination": visits.getCountEach(
                     dfField=["vaccination"], name="Vaccine"
                 ),
-                "df_init_cd4": ix.getCD4(isInit=True),
-                "df_cd4": ix.getCD4(isInit=False),
+                "init_cd4": ix.getCD4(isInit=True),
+                "cd4": ix.getCD4(isInit=False),
             }
         )

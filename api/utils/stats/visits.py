@@ -255,7 +255,7 @@ class VisitStats:
         arv_start_stats.columns = ["จำนวนวัน"]
 
         return {
-            "df_binned_timedelta": df_binned_timedelta,
+            "df_data": df_binned_timedelta,
             "df_describe": arv_start_stats,
         }
 

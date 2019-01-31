@@ -1,7 +1,8 @@
+import numpy as np
+import pandas as pd
+
 from api import db
 from api.models import InvestigationModel
-import pandas as pd
-import numpy as np
 
 
 class IxStats:
@@ -22,32 +23,52 @@ class IxStats:
         self.df_cleaned = self.df_raw.fillna(value="N/A")
 
     def getCD4(self, isInit=False):
-        df_data = self.df_cleaned[["date", "patient_id", "cd4"]]
-        df_data.dropna(subset=["cd4"], inplace=True, how="any")
+        try:
+            result = {}
+            df_data = self.df_cleaned[["date", "patient_id", "cd4"]]
+            df_data.dropna(subset=["cd4"], inplace=True, how="any")
 
-        # resort the value
-        if isInit:
-            df_data.sort_values("date", ascending=False, inplace=True)
+            # resort the value
+            if isInit:
+                df_data.sort_values("date", ascending=False, inplace=True)
+                result["header"] = "CD4 Levels Initially"
 
-        # keep only last cd4 info per patient
-        df_data = df_data.drop_duplicates(
-            subset=["patient_id"], keep="last"
-        )
+            else:
+                result["header"] = "CD4 Levels Overall"
 
-        # bins and labels
-        bins = np.array([0, 50, 100, 200, 5000])
-        labels = ["0 - 50", "51 - 100", "101 - 200", "> 201"]
+            # keep only last cd4 info per patient
+            df_data = df_data.drop_duplicates(
+                subset=["patient_id"], keep="last"
+            )
 
-        df_data.loc[:, "bins"] = pd.cut(
-            df_data.loc[:, "cd4"], bins, labels=labels
-        )
-        df_binned_cd4 = df_data.groupby(df_data["bins"]).count()
+            # bins and labels
+            bins = np.array([0, 50, 100, 200, 350, 5000])
+            labels = ["0 - 50", "51 - 100", "101 - 200", "201 - 350", "> 350"]
 
-        # only select one column
-        df_binned_cd4 = df_binned_cd4[["patient_id"]]
+            df_data.loc[:, "cd4"] = df_data.loc[:, "cd4"].astype(
+                float, errors="ignore"
+            )
+            df_data.loc[:, "bins"] = pd.cut(
+                df_data.loc[:, "cd4"], bins, labels=labels
+            )
+            df_binned_cd4 = df_data.groupby(df_data["bins"]).count()
 
-        # rename columns
-        df_binned_cd4.columns = ["จำนวน"]
-        df_binned_cd4.index.names = ["CD4"]
+            # only select one column
+            df_binned_cd4 = df_binned_cd4[["patient_id"]]
 
-        return df_binned_cd4
+            # rename columns
+            df_binned_cd4.columns = ["จำนวน"]
+            df_binned_cd4.index.names = ["CD4"]
+
+            # stats df
+            df_stats = pd.DataFrame(df_data["cd4"].describe())
+            df_stats.index.columns = ["CD4"]
+
+            # results
+            result["df_data"] = df_binned_cd4
+            result["df_describe"] = df_stats
+
+            return result
+
+        except (AttributeError, ValueError, KeyError):
+            return None
