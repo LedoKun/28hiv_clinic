@@ -5,6 +5,7 @@ from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 import pandas as pd
 
+
 # default='warn'
 pd.options.mode.chained_assignment = None
 

@@ -4,5 +4,6 @@
     "python.linting.enabled": true,
     "python.linting.pylintEnabled": false,
     "python.linting.flake8Enabled": true,
-    "python.formatting.blackArgs": ["--line-length", "79"]
+    "python.formatting.blackArgs": ["--line-length", "79"],
+    "editor.formatOnSave": false
 }

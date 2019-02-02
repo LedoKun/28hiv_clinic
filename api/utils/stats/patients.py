@@ -1,9 +1,10 @@
+from datetime import date
+
+import numpy as np
+import pandas as pd
+
 from api import db
 from api.models import PatientModel
-import pandas as pd
-import numpy as np
-
-from datetime import date
 
 
 class PatientStats:

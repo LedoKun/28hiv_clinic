@@ -1,11 +1,11 @@
 from collections import Counter
+from datetime import timedelta
 
 import pandas as pd
 from sqlalchemy.orm import joinedload
 
 from api import db
 from api.models import PatientModel, VisitModel
-from api.schemas import VisitSchema
 
 
 class VisitStats:
@@ -166,50 +166,52 @@ class VisitStats:
                 .all()
             )
 
-            visit_schema = VisitSchema(
-                many=True, only=("date", "arv", "patient_id")
-            )
-            query_results = visit_schema.dump(query).data
-
             # get first visit, arv start date and calculate time length
             results = {}
 
-            for row in query_results:
-                patient_id = row["patient_id"]
+            for row in query:
+                patient_id = row.patient_id
 
                 # add new entry
                 if patient_id not in results:
                     results[patient_id] = {
                         "first_visit": None,
                         "start_arv": None,
+                        "time_delta": None,
                     }
 
-                if (
-                    results[patient_id]["start_arv"]
-                    and results[patient_id]["first_visit"]
-                ):
+                if results[patient_id]["time_delta"]:
                     continue
 
-                elif not row["arv"] and not results[patient_id]["first_visit"]:
-                    results[patient_id]["first_visit"] = row["date"]
+                elif not row.arv and not results[patient_id]["first_visit"]:
+                    results[patient_id]["first_visit"] = row.date
 
-                elif row["arv"] and not results[patient_id]["start_arv"]:
-                    results[patient_id]["start_arv"] = row["date"]
+                elif row.arv and not results[patient_id]["start_arv"]:
+                    results[patient_id]["start_arv"] = row.date
+
+                    # calculate time_delta
+                    try:
+                        time_delta = (
+                            results[patient_id]["start_arv"]
+                            - results[patient_id]["first_visit"]
+                        )
+
+                    except TypeError:
+                        time_delta = None
+
+                    if not time_delta or time_delta < timedelta(0):
+                        results[patient_id]["time_delta"] = timedelta(0)
+
+                    else:
+                        results[patient_id]["time_delta"] = time_delta
 
             results_df = pd.DataFrame.from_dict(results, orient="index")
 
-            # convert to date object
+            # convert to date object &
+            # get year of first visit
             results_df["first_visit"] = pd.to_datetime(
                 results_df["first_visit"]
             )
-            results_df["start_arv"] = pd.to_datetime(results_df["start_arv"])
-
-            # calculate timedelta
-            results_df["time_delta"] = (
-                results_df["start_arv"] - results_df["first_visit"]
-            )
-
-            # get year of first visit
             results_df["year"] = results_df["first_visit"].dt.year
 
             # save the df for later use
@@ -228,7 +230,7 @@ class VisitStats:
         df_data = df_data.dropna(how="any")
 
         bins = [
-            pd.Timedelta(weeks=0),
+            pd.Timedelta(weeks=-1),
             pd.Timedelta(weeks=1),
             pd.Timedelta(weeks=2),
             pd.Timedelta(weeks=3),
@@ -253,12 +255,9 @@ class VisitStats:
 
         # other stats
         arv_start_stats = pd.DataFrame(df_data.describe())
-        arv_start_stats.columns = ["จำนวนวัน"]
+        arv_start_stats.columns = ["ข้อมูล"]
 
-        return {
-            "df_data": df_binned_timedelta,
-            "df_describe": arv_start_stats,
-        }
+        return {"df_data": df_binned_timedelta, "df_describe": arv_start_stats}
 
     def getDaysToStartARV(self):
         df_data = self.get_start_dates_df()
@@ -276,8 +275,8 @@ class VisitStats:
                     df_data=df_year[["time_delta"]]
                 )
                 result["header"] = str(year) + " - Number of Days To Start ARV"
-
                 results.append(result)
+
             except (AttributeError, ValueError, KeyError):
                 continue
 

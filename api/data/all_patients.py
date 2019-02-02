@@ -1,11 +1,11 @@
 from flask import current_app, jsonify
+from flask_jwt_extended import jwt_required
 from flask_restful import Resource
+from webargs import fields
+from webargs.flaskparser import use_args
 
 from api.models import PatientModel
 from api.schemas import PatientSchema
-from flask_jwt_extended import jwt_required
-from webargs.flaskparser import use_args
-from webargs import fields
 
 page_args = {"page_number": fields.Int(missing=0)}
 

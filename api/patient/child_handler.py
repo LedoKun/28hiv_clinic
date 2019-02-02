@@ -1,16 +1,12 @@
 from flask import abort, jsonify, request
+from flask_jwt_extended import jwt_required
 from flask_restful import Resource
 from webargs.flaskparser import parser
 
 from api import db
-from api.models import (
-    AppointmentModel,
-    InvestigationModel,
-    PatientModel,
-    VisitModel,
-)
+from api.models import (AppointmentModel, InvestigationModel, PatientModel,
+                        VisitModel)
 from api.schemas import AppointmentSchema, InvestigationSchema, VisitSchema
-from flask_jwt_extended import jwt_required
 
 
 class ChildHandler(Resource):
@@ -89,8 +85,9 @@ class ChildHandler(Resource):
         # find old record
         if args["id"]:
             old_record = (
-                model_object.query
-                .filter(model_object.patient_id == patient.id)
+                model_object.query.filter(
+                    model_object.patient_id == patient.id
+                )
                 .filter(model_object.id == args["id"])
                 .first()
             )

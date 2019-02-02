@@ -1,8 +1,7 @@
 # https://github.com/Breta01/handwriting-ocr/blob/master/notebooks/page_detection.ipynb
 
-import numpy as np
 import cv2
-
+import numpy as np
 
 SMALL_HEIGHT = 800
 

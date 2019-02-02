@@ -1,6 +1,6 @@
 from marshmallow import Schema, fields, validate
-from api import db
 
+from api import db
 
 Schema.TYPE_MAPPING[db.Column(db.Integer())] = fields.Integer
 Schema.TYPE_MAPPING[db.Column(db.Unicode())] = fields.String
@@ -227,7 +227,7 @@ class PatientSchema(BaseSchema):
             ]
         ),
         missing="รักษาต่อเนื่อง",
-        default="รักษาต่อเนื่อง"
+        default="รักษาต่อเนื่อง",
     )
     referOutTo = fields.String(missing=None)
     name = fields.String(required=True)

@@ -2,9 +2,9 @@ from flask import jsonify
 from flask_jwt_extended import jwt_required
 from flask_restful import Resource
 
+from api.utils.stats.investigation import IxStats
 from api.utils.stats.patients import PatientStats
 from api.utils.stats.visits import VisitStats
-from api.utils.stats.investigation import IxStats
 
 
 class Stats(Resource):

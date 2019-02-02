@@ -1,4 +1,5 @@
 from flask import abort, current_app, jsonify, request
+from flask_jwt_extended import jwt_required
 from flask_restful import Resource
 from webargs import fields
 from webargs.flaskparser import parser
@@ -6,7 +7,6 @@ from webargs.flaskparser import parser
 from api import db
 from api.models import AppointmentModel, PatientModel, VisitModel
 from api.schemas import AppointmentSchema, VisitSchema
-from flask_jwt_extended import jwt_required
 
 today_args = {
     "date": fields.Date(required=True),
@@ -79,9 +79,7 @@ class Dashboard(Resource):
             many=True,
         )
 
-        patient_examined.items = visit_schema.dump(
-            patient_examined.items
-        ).data
+        patient_examined.items = visit_schema.dump(patient_examined.items).data
 
         # count total number of patients
         count_patient = db.session.query(PatientModel.id).count()

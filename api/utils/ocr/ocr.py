@@ -1,6 +1,7 @@
 import pytesseract
-from page_detection import PageDetection
 from PIL import Image
+
+from page_detection import PageDetection
 
 
 class OCR(object):
@@ -15,9 +16,7 @@ class OCR(object):
             cv2_page = self.page.getThreshPage()
             pil_im = Image.fromarray(cv2_page)
             self.text = pytesseract.image_to_string(
-                pil_im,
-                lang="eng",
-                config="--psm 3 --oem 2"
+                pil_im, lang="eng", config="--psm 3 --oem 2"
             )
 
         return self.text

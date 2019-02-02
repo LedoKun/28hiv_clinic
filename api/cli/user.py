@@ -1,12 +1,12 @@
 import sys
+from getpass import getpass
 
 import click
+from marshmallow import pprint
 
 from api import db
 from api.models import UserModel
 from api.schemas import UserSchema
-from marshmallow import pprint
-from getpass import getpass
 
 
 def register(app):
@@ -23,7 +23,7 @@ def register(app):
         """
         Add user via command-line interface
         """
-        password = getpass()        
+        password = getpass()
 
         user_schema = UserSchema()
         credential = user_schema.load(

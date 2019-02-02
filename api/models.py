@@ -1,8 +1,10 @@
 from datetime import datetime
-from passlib.hash import bcrypt
-from api import db
+
 from flask import current_app
+from passlib.hash import bcrypt
 from sqlalchemy.dialects.postgresql import ARRAY
+
+from api import db
 
 
 class BaseModel(db.Model):

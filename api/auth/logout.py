@@ -1,11 +1,11 @@
 from flask import jsonify
+from flask_jwt_extended import get_jti, jwt_required
 from flask_restful import Resource
 from webargs import fields
 from webargs.flaskparser import use_args
 
 from api import db
 from api.models import RevokedTokenModel
-from flask_jwt_extended import get_jti, jwt_required
 
 logout_args = {
     "jwt_token": fields.Str(required=True),

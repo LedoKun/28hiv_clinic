@@ -1,11 +1,11 @@
 from flask import abort, jsonify, request
+from flask_jwt_extended import jwt_required
 from flask_restful import Resource
 from webargs import fields
 from webargs.flaskparser import parser
 
 from api.models import PatientModel
 from api.schemas import PatientSchema
-from flask_jwt_extended import jwt_required
 
 search_args = {"keyword": fields.Str(required=True)}
 
