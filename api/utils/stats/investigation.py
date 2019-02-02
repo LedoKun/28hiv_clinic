@@ -33,13 +33,13 @@ class IxStats:
                 df_data = df_data.drop_duplicates(
                     subset=["patient_id"], keep="first"
                 )
-                result["header"] = "CD4 Levels Initially"
+                result["header"] = "Initial CD4 Levels "
 
             else:
                 df_data = df_data.drop_duplicates(
                     subset=["patient_id"], keep="last"
                 )
-                result["header"] = "CD4 Levels Overall"
+                result["header"] = "Overall CD4 Levels"
 
             # bins and labels
             bins = np.array([-1, 50, 100, 200, 350, 5000])
