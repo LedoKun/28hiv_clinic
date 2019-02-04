@@ -237,7 +237,7 @@ class PatientSchema(BaseSchema):
     )
     gender = fields.String(
         validate=validate.OneOf(
-            ["Heterosexual", "Homosexual", "Bisexual", "-"]
+            ["Heterosexual", "Homosexual", "Bisexual", "Transgender", "-"]
         ),
         missing=None,
     )
