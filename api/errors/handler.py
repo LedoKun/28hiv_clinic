@@ -29,13 +29,6 @@ def error_handler(error):
             "description": error.description,
         }
 
-    # elif isinstance(error, ValidationError):
-    #     error_payload = {
-    #         "statusCode": 422,
-    #         "name": "Form Validation Error",
-    #         "description": str(error),
-    #     }
-
     else:
         error_payload = {
             "statusCode": 500,
@@ -49,4 +42,10 @@ def error_handler(error):
 # This error handler is necessary for usage with Flask-RESTful
 @parser.error_handler
 def handle_parse_error(error, req, schema, status_code=None, headers=None):
-    raise HTTPException(description=str(error), response=422)
+    return jsonify(
+        {
+            "statusCode": 422,
+            "name": "Form Validation Failed",
+            "description": str(error),
+        }
+    )

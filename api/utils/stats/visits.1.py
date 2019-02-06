@@ -143,7 +143,7 @@ class VisitStats:
 
         return count_df
 
-    def binDaysToStartARV(self, df_data):
+    def days_to_start_arv_df(self, df_data):
         if df_data is None or df_data.empty:
             return None
 
@@ -179,6 +179,40 @@ class VisitStats:
         arv_start_stats.columns = ["ข้อมูล"]
 
         return {"df_data": df_binned_timedelta, "df_describe": arv_start_stats}
+
+    def getDaysToStartARV(self):
+        df_data = self.countDaysToStartARV()
+        min_year = int(df_data.year.min().item())
+        max_year = int(df_data.year.max().item())
+
+        results = []
+
+        # bin each year data
+        for year in range(min_year, max_year + 1):
+            try:
+                df_year = df_data[df_data.year == year]
+
+                result = self.days_to_start_arv_df(
+                    df_data=df_year[["time_to_start"]]
+                )
+                result["header"] = str(year) + " - Number of Days To Start ARV"
+                results.append(result)
+
+            except (AttributeError, ValueError, KeyError):
+                continue
+
+        # bin overall data
+        try:
+            overall = self.days_to_start_arv_df(
+                df_data=df_data[["time_to_start"]]
+            )
+            overall["header"] = "Overall" + " - Days To Start ARV"
+            results.append(overall)
+
+        except (AttributeError, ValueError, KeyError):
+            pass
+
+        return results
 
     def countDaysToStartARV(self):
         if self.df_days_until_arv and not self.df_days_until_arv.empty:
@@ -219,7 +253,7 @@ class VisitStats:
             first_visit = None
             start_arv = None
 
-            for _, row in df_patient_visits.iterrows():
+            for id, row in df_patient_visits.iterrows():
                 if row["arv"] and not first_visit:
                     time_delta.append(
                         {
@@ -264,37 +298,3 @@ class VisitStats:
         # save the df for later use
         self.df_days_until_arv = results_df
         return results_df
-
-    def getDaysToStartARV(self):
-        df_data = self.countDaysToStartARV()
-        min_year = int(df_data.year.min().item())
-        max_year = int(df_data.year.max().item())
-
-        results = []
-
-        # bin each year data
-        for year in range(min_year, max_year + 1):
-            try:
-                df_year = df_data[df_data.year == year]
-
-                result = self.binDaysToStartARV(
-                    df_data=df_year[["time_to_start"]]
-                )
-                result["header"] = str(year) + " - Number of Days To Start ARV"
-                results.append(result)
-
-            except (AttributeError, ValueError, KeyError):
-                continue
-
-        # bin overall data
-        try:
-            overall = self.binDaysToStartARV(
-                df_data=df_data[["time_to_start"]]
-            )
-            overall["header"] = "Overall" + " - Days To Start ARV"
-            results.append(overall)
-
-        except (AttributeError, ValueError, KeyError):
-            pass
-
-        return results
