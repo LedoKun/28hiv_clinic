@@ -7,11 +7,12 @@ from api.models import InvestigationModel
 
 class IxStats:
     df_raw = None
-    df_cleaned = None
 
     def __init__(self):
+        sql_statement = InvestigationModel.query.order_by(InvestigationModel.date.asc()).statement
+
         self.df_raw = pd.io.sql.read_sql(
-            sql=InvestigationModel.query.statement, con=db.session.bind
+            sql=sql_statement, con=db.session.bind
         )
 
         self.df_raw["date"] = pd.to_datetime(
@@ -19,27 +20,21 @@ class IxStats:
         )
 
         self.df_raw.set_index("date")
-        self.df_raw.sort_values("date", ascending=True, inplace=True)
-        self.df_cleaned = self.df_raw.fillna(value="N/A")
 
     def getCD4(self, isInit=False):
         try:
-            result = {}
-            df_data = self.df_cleaned[["date", "patient_id", "cd4"]]
-            df_data.dropna(subset=["cd4"], inplace=True, how="any")
+            df_data = self.df_raw[["date", "patient_id", "cd4"]]
 
-            # keep only last or first cd4 info per patient
             if isInit:
-                df_data = df_data.drop_duplicates(
-                    subset=["patient_id"], keep="first"
-                )
-                result["header"] = "Initial CD4 Levels "
+                df_data.sort_values("date", ascending=True, inplace=True)
+                result["header"] = "Initial CD4 Levels"
 
             else:
-                df_data = df_data.drop_duplicates(
-                    subset=["patient_id"], keep="last"
-                )
                 result["header"] = "Overall CD4 Levels"
+
+            df_data = df_data.drop_duplicates(
+                subset=["patient_id"], keep="first"
+            )
 
             # bins and labels
             bins = np.array([-1, 50, 100, 200, 350, 5000])
