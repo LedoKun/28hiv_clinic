@@ -23,6 +23,7 @@ class IxStats:
 
     def getCD4(self, isInit=False):
         try:
+            result = {}
             df_data = self.df_raw[["date", "patient_id", "cd4"]]
 
             if isInit:
