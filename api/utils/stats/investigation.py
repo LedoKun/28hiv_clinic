@@ -33,8 +33,11 @@ class IxStats:
             else:
                 result["header"] = "Overall CD4 Levels"
 
-            df_data = df_data.drop_duplicates(
-                subset=["patient_id"], keep="first"
+            df_data.dropna(
+                subset=["cd4"], how="any", inplace=True
+            )
+            df_data.drop_duplicates(
+                subset=["patient_id"], keep="first", inplace=True
             )
 
             # bins and labels
