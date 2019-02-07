@@ -9,7 +9,7 @@ class IxStats:
     df_raw = None
 
     def __init__(self):
-        sql_statement = InvestigationModel.query.order_by(InvestigationModel.date.asc()).statement
+        sql_statement = InvestigationModel.query.order_by(InvestigationModel.date.desc()).statement
 
         self.df_raw = pd.io.sql.read_sql(
             sql=sql_statement, con=db.session.bind
