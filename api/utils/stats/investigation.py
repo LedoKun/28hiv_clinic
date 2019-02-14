@@ -9,7 +9,9 @@ class IxStats:
     df_raw = None
 
     def __init__(self):
-        sql_statement = InvestigationModel.query.order_by(InvestigationModel.date.desc()).statement
+        sql_statement = InvestigationModel.query.order_by(
+            InvestigationModel.date.desc()
+        ).statement
 
         self.df_raw = pd.io.sql.read_sql(
             sql=sql_statement, con=db.session.bind
@@ -21,24 +23,47 @@ class IxStats:
 
         self.df_raw.set_index("date")
 
+    def getSortedIx(self, ascending=False, colName=[]):
+        try:
+            new_df_columns = ["date", "patient_id"] + colName
+
+            df_data = self.df_raw[new_df_columns]
+
+            # drop rows with missing data
+            df_data.dropna(subset=colName, how="any", inplace=True)
+
+            # sort the dataframe
+            if ascending:
+                df_data.sort_values("date", ascending=ascending, inplace=True)
+
+            # only keep the first occurence of the dataframe
+            df_data.drop_duplicates(
+                subset=["patient_id"], keep="first", inplace=True
+            )
+
+            # drop unneeded columns
+            df_data.drop(["patient_id"], axis=1, inplace=True)
+
+            return df_data
+
+        except (AttributeError, ValueError, KeyError):
+            return None
+
+    # def getVLStats(self):
+    #     result = {}
+    #     df_data = self.getSortedIx(ascending=isInit, colName=["vl"])
+
     def getCD4(self, isInit=False):
         try:
             result = {}
-            df_data = self.df_raw[["date", "patient_id", "cd4"]]
+            df_data = self.getSortedIx(ascending=isInit, colName=["cd4"])
+            df_data.drop(["date"], axis=1, inplace=True)
 
             if isInit:
-                df_data.sort_values("date", ascending=True, inplace=True)
                 result["header"] = "Initial CD4 Levels"
 
             else:
                 result["header"] = "Overall CD4 Levels"
-
-            df_data.dropna(
-                subset=["cd4"], how="any", inplace=True
-            )
-            df_data.drop_duplicates(
-                subset=["patient_id"], keep="first", inplace=True
-            )
 
             # bins and labels
             bins = np.array([-1, 50, 100, 200, 350, 5000])
@@ -49,9 +74,6 @@ class IxStats:
                 df_data.loc[:, "cd4"], bins, labels=labels
             )
             df_binned_cd4 = df_data.groupby(df_data["bins"]).count()
-
-            # only select one column
-            df_binned_cd4 = df_binned_cd4[["patient_id"]]
 
             # rename columns
             df_binned_cd4.columns = ["จำนวน"]
