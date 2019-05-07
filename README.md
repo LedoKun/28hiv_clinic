@@ -2,9 +2,9 @@
 
 ## Requirements
 * The backend server requires the following dependencies:
-    * python 3.6
+    * python (3.6 or newer)
     * python3-pip
-    * postgresql
+    * PostgreSQL (with uuid-ossp module, see https://stackoverflow.com/a/12505220)
 
 * If you need to import patients' information from HCIS system, you will need a Windows PC/VM with the following dependencies:
     * selenium-server
