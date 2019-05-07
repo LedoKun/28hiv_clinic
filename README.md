@@ -20,8 +20,8 @@ source ./venv/bin/activate
 pip install -r requirements.txt
 
 # Setup database tables
-flask migrate
-flask upgrate
+flask db migrate
+flask db upgrate
 
 # Seed ICD10 data to the database
 flask icd10 init
