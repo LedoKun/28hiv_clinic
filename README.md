@@ -15,7 +15,6 @@ Please see https://github.com/SeleniumHQ/selenium/wiki/InternetExplorerDriver fo
 ## Project setup
 ```
 # Rename example.env to .env and edit the file
-
 python3 -m ./venv
 source ./venv/bin/activate
 pip install -r requirements.txt
@@ -35,19 +34,19 @@ python ./selenium-patient-importer.py
 Note: Please edit server ip, username and password in the script.
 
 
-### Compiles and hot-reloads for development
+## Run server with hot-reloads for development
 ```
 flask run
 ```
 The backend (dev) server will be avalible at http://localhost:5050
 
 
-### Lints and fixes files
+## Lints files
 ```
 black --line-length=79 ./
 ```
 
-### Todo
+## Todo
 * Report generation
 * Allow editing/adding patient's information
 * User & credential system (Using JWT token)
