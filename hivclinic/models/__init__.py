@@ -4,7 +4,7 @@ import sqlalchemy
 from hivclinic import db
 from sqlalchemy.dialects.postgresql import UUID
 import datetime
-from flask import current_app
+# from flask import current_app
 
 
 # class QueryWithSoftDelete(BaseQuery):
@@ -67,7 +67,7 @@ class BaseModel(db.Model):
             "do_not_update_keys",
             "protected_keys",
             "relationship_keys",
-            "query_class",
+            # "query_class",
             "imported",
         ]
     )

@@ -29,20 +29,18 @@ class PatientModel(BaseModel):
     gender = db.Column(db.Unicode())
     maritalStatus = db.Column(db.Unicode())
     nationality = db.Column(db.Unicode())
-    educationLevel = db.Column(db.Unicode())
     healthInsurance = db.Column(db.Unicode(), nullable=False)
 
-    address = db.Column(db.Unicode())
     phoneNumbers = db.Column(ARRAY(db.Unicode()))
     relativePhoneNumbers = db.Column(ARRAY(db.Unicode()))
 
     referralStatus = db.Column(db.Unicode())
     referredFrom = db.Column(db.Unicode())
 
-    riskBehaviors = db.Column(ARRAY(db.Unicode()))
-
     patientStatus = db.Column(db.Unicode())
-    onlyPrescription = db.Column(db.Boolean(), nullable=False, default=False)
+    referredOutTo = db.Column(db.Unicode())
+
+    riskBehaviors = db.Column(ARRAY(db.Unicode()))
 
     # relationship
     partners = db.relationship(

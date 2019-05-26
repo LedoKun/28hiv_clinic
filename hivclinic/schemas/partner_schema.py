@@ -23,3 +23,4 @@ class PartnerSchema(BaseSchema):
 
     class Meta:
         model = PartnerModel
+        transient = True

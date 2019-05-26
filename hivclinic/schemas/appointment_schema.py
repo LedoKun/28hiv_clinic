@@ -15,3 +15,4 @@ class AppointmentSchema(BaseSchema):
 
     class Meta:
         model = AppointmentModel
+        transient = True

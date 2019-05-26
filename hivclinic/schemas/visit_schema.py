@@ -15,7 +15,7 @@ class VisitSchema(BaseSchema):
     # ARTAdherenceProblem = fields.Str()
 
     # impression = fields.List(fields.Str())
-    # impression = fields.List(fields.Str(required=True), required=True)
+    impression = fields.List(fields.Str(required=True), required=True)
 
     # arv = fields.List(fields.Str())
     # whySwitchingARV = fields.Str()
@@ -29,3 +29,4 @@ class VisitSchema(BaseSchema):
 
     class Meta:
         model = VisitModel
+        transient = True

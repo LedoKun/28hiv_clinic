@@ -53,6 +53,12 @@ class PatientSchema(BaseSchema):
             if fieldname not in data.keys():
                 continue
 
+            if data.keys() is None:
+                continue
+
+            if not data[fieldname]:
+                continue
+
             existed_patient = PatientModel.query.filter(
                 getattr(PatientModel, fieldname) == data[fieldname]
             ).first()
@@ -61,10 +67,15 @@ class PatientSchema(BaseSchema):
                 continue
 
             if existed_patient and "id" not in data.keys():
-                raise ValidationError({fieldname: f"The data must be unique."})
+                raise ValidationError(
+                    {fieldname: f"The record exists in database."}
+                )
 
             if existed_patient.id != data["id"]:
-                raise ValidationError({fieldname: f"The data must be unique."})
+                raise ValidationError(
+                    {fieldname: f"The record exists in database."}
+                )
 
     class Meta:
         model = PatientModel
+        transient = True

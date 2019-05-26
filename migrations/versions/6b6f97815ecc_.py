@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: aa559d475c50
+Revision ID: 6b6f97815ecc
 Revises: 
-Create Date: 2019-05-07 16:27:37.857444
+Create Date: 2019-05-20 08:44:29.801709
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'aa559d475c50'
+revision = '6b6f97815ecc'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -39,16 +39,14 @@ def upgrade():
     sa.Column('gender', sa.Unicode(), nullable=True),
     sa.Column('maritalStatus', sa.Unicode(), nullable=True),
     sa.Column('nationality', sa.Unicode(), nullable=True),
-    sa.Column('educationLevel', sa.Unicode(), nullable=True),
     sa.Column('healthInsurance', sa.Unicode(), nullable=False),
-    sa.Column('address', sa.Unicode(), nullable=True),
     sa.Column('phoneNumbers', postgresql.ARRAY(sa.Unicode()), nullable=True),
     sa.Column('relativePhoneNumbers', postgresql.ARRAY(sa.Unicode()), nullable=True),
     sa.Column('referralStatus', sa.Unicode(), nullable=True),
     sa.Column('referredFrom', sa.Unicode(), nullable=True),
-    sa.Column('riskBehaviors', postgresql.ARRAY(sa.Unicode()), nullable=True),
     sa.Column('patientStatus', sa.Unicode(), nullable=True),
-    sa.Column('onlyPrescription', sa.Boolean(), nullable=False),
+    sa.Column('referredOutTo', sa.Unicode(), nullable=True),
+    sa.Column('riskBehaviors', postgresql.ARRAY(sa.Unicode()), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('clinicID'),
     sa.UniqueConstraint('hn')

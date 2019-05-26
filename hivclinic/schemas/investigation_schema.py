@@ -68,15 +68,39 @@ class InvestigationSchema(BaseSchema):
 
     @validates_schema
     def validate_rpr(self, data):
-        if "rpr" in data.keys() and data["rpr"] % 2 != 0:
+        if (
+            "rpr" in data.keys()
+            and data["rpr"]
+            and (int(data["rpr"]) % 2 != 0 or int(data["rpr"]) == 1)
+        ):
             raise ValidationError(
-                {"rpr": "RPR titer must be divisable by two."}
+                {"rpr": "RPR titer must be one or divisable by two."}
             )
 
     @validates_schema
     def validate_lab_input(self, data):
-        if not (len(data) >= 2 and "date" in data.keys()):
+        count_not_null = 0
+
+        if not (len(data) >= 2):
+            raise ValidationError("Enter at least one investigation result.")
+
+        for key in data:
+            skip_keys = (
+                set(InvestigationModel.do_not_update_keys)
+                | set(InvestigationModel.relationship_keys)
+                | set(InvestigationModel.protected_keys)
+                | set(["modified_on"])
+            )
+
+            if key in skip_keys:
+                continue
+
+            if not data[key]:
+                count_not_null = count_not_null + 1
+
+        if not count_not_null >= 2:
             raise ValidationError("Enter at least one investigation result.")
 
     class Meta:
         model = InvestigationModel
+        transient = True

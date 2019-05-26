@@ -8,3 +8,4 @@ class ICD10Schema(BaseSchema):
 
     class Meta:
         model = ICD10Model
+        transient = True

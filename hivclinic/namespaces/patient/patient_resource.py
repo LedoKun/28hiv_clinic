@@ -87,10 +87,25 @@ class SearchPatientResource(Resource):
 @api.param("patient_uuid", "The patient identifier")
 class PatientResource(Resource):
     @api.doc("get_patient")
-    def get(self, patient_uuid):
+    @use_args(
+        {
+            "patient_uuid": fields.UUID(location="view_args"),
+            "only_dermographic": fields.Boolean(
+                location="querystring", missing=False
+            ),
+        }
+    )
+    def get(self, args, **kwargs):
         """Get patient with the UUID"""
-        patient_schema = PatientSchema(many=False)
-        patient = PatientModel.query.filter_by(id=patient_uuid).first()
+        if args["only_dermographic"]:
+            patient_schema = PatientSchema(
+                many=False, exclude=PatientModel.relationship_keys
+            )
+
+        else:
+            patient_schema = PatientSchema(many=False)
+
+        patient = PatientModel.query.filter_by(id=args["patient_uuid"]).first()
 
         return patient_schema.dump(patient), 200
 

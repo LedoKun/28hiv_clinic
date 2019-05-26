@@ -121,9 +121,11 @@ class SubcollectionResource(Resource):
     def patch(self, patient_uuid, subcollection_type, subcollection_uuid):
         """Patch subcollection with the UUID"""
         Model, Schema = getSubcollectionClasses(subcollection_type)
-        subcollection_schema = Schema(many=False)
+        subcollection_schema = Schema(
+            many=False, exclude=Model.relationship_keys
+        )
 
-        patient_payload = parser.parse(Schema, request)
+        patient_payload = parser.parse(subcollection_schema, request)
         patient_payload = subcollection_schema.dump(patient_payload)
 
         subcollection = (

@@ -11,8 +11,8 @@ class InvestigationModel(BaseModel):
 
     # hiv related tests
     viralLoad = db.Column(db.Float())
-    percentCD4 = db.Column(db.Float())
     absoluteCD4 = db.Column(db.Float())
+    percentCD4 = db.Column(db.Float())
 
     # cbc
     hemoglobin = db.Column(db.Float())
