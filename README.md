@@ -15,6 +15,10 @@ Please see https://github.com/SeleniumHQ/selenium/wiki/InternetExplorerDriver fo
 ## Project setup
 ```
 # Rename example.env to .env and edit the file
+cp example.env .env
+nano .env
+
+# Setup python virtual environment
 python3 -m ./venv
 source ./venv/bin/activate
 pip install -r requirements.txt
@@ -29,7 +33,11 @@ flask icd10 init
 
 ## Import patient's information from HCIS
 ```
+# Run scraping script
 python ./selenium-patient-importer.py
+
+# Imported scraped data to the database
+flask patient importjson ./all_patient_info.json
 ```
 Note: Please edit server ip, username and password in the script.
 
@@ -41,7 +49,7 @@ flask run
 The backend (dev) server will be avalible at http://localhost:5050
 
 
-## Lints files
+## Lint files
 ```
 black --line-length=79 ./
 ```

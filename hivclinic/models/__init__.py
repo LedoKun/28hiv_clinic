@@ -4,6 +4,7 @@ import sqlalchemy
 from hivclinic import db
 from sqlalchemy.dialects.postgresql import UUID
 import datetime
+
 # from flask import current_app
 
 

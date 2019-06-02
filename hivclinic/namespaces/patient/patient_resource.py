@@ -1,4 +1,4 @@
-from flask import abort, request
+from flask import abort, request, current_app
 
 from flask_restplus import Resource
 from hivclinic import db
@@ -6,11 +6,9 @@ from hivclinic.models.patient_model import PatientModel
 from hivclinic.schemas.patient_schema import PatientSchema
 from webargs.flaskparser import parser, use_args
 from webargs import fields
+from marshmallow.validate import OneOf
 
 from . import api
-
-
-search_args = {"keyword": fields.Str(required=True)}
 
 
 @api.route("/")
@@ -58,26 +56,56 @@ class AllPatientResource(Resource):
 @api.route("/search")
 class SearchPatientResource(Resource):
     @api.doc("search_for_patients")
-    @use_args(search_args, locations=("querystring",))
+    @use_args(
+        {
+            "fieldName": fields.Str(
+                required=False,
+                validate=OneOf(["referredFrom", "referredOutTo"]),
+            ),
+            "keyword": fields.Str(required=True),
+        },
+        locations=("querystring",),
+    )
     def get(self, args):
         """Search for patients"""
-        only = ["id", "hn", "clinicID", "name", "nationality"]
+        if "fieldName" not in args:
+            only = ["id", "hn", "clinicID", "name", "nationality"]
 
-        patient_schema = PatientSchema(
-            many=True, exclude=PatientModel.relationship_keys, only=only
-        )
-
-        patients_query = (
-            PatientModel.query.order_by(PatientModel.clinicID)
-            .filter(
-                PatientModel.hn.ilike("%{}%".format(args["keyword"]))
-                | PatientModel.clinicID.ilike("%{}%".format(args["keyword"]))
-                | PatientModel.napID.ilike("%{}%".format(args["keyword"]))
-                | PatientModel.name.ilike("%{}%".format(args["keyword"]))
+            patient_schema = PatientSchema(
+                many=True, exclude=PatientModel.relationship_keys, only=only
             )
-            .limit(10)
-            .all()
-        )
+
+            patients_query = (
+                PatientModel.query.order_by(PatientModel.clinicID)
+                .filter(
+                    PatientModel.hn.ilike("%{}%".format(args["keyword"]))
+                    | PatientModel.clinicID.ilike(
+                        "%{}%".format(args["keyword"])
+                    )
+                    | PatientModel.napID.ilike("%{}%".format(args["keyword"]))
+                    | PatientModel.name.ilike("%{}%".format(args["keyword"]))
+                )
+                .limit(current_app.config["MAX_NUMBER_OF_PATIENT_IN_SEARCH"])
+                .all()
+            )
+
+        else:
+            patient_schema = PatientSchema(
+                many=True,
+                exclude=PatientModel.relationship_keys,
+                only=[args["fieldName"]],
+            )
+
+            patients_query = (
+                PatientModel.query.filter(
+                    getattr(PatientModel, args["fieldName"]).ilike(
+                        "%{}%".format(args["keyword"])
+                    )
+                )
+                .limit(current_app.config["MAX_NUMBER_OF_HOSPITAL_IN_SEARCH"])
+                .all()
+            )
+
         patients = patient_schema.dump(patients_query)
 
         return patients, 200

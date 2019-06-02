@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, UUID
 class VisitModel(BaseModel):
     __tablename__ = "visit"
     relationship_keys = {"patientID"}
+    # protected_keys = {"medications"}
 
     date = db.Column(db.Date(), nullable=False)
 

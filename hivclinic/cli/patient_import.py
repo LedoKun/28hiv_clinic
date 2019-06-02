@@ -96,7 +96,7 @@ def register(app):
             patient_data["dateOfBirth"]
         )
 
-        patient_schema = PatientSchema(many=False)
+        patient_schema = PatientSchema(many=False, unknown="EXCLUDE")
 
         patient = PatientModel.query.filter(
             PatientModel.hn == patient_data["hn"]
@@ -231,18 +231,18 @@ def register(app):
                         )
                     ):
                         impression.append(
-                            "[B20] Human immunodeficiency virus [HIV] disease"
+                            "B20: Human immunodeficiency virus [HIV] disease"
                         )
 
                     if "isoniazid" in tb_string and len(tbMedications) == 1:
                         impression.append(
-                            "[R7611] Nonspecific reaction to tuberculin skin "
+                            "R7611: Nonspecific reaction to tuberculin skin "
                             + "test without active tuberculosis"
                         )
 
                     if len(tbMedications) >= 2:
                         impression.append(
-                            "[A159] Respiratory tuberculosis unspecified"
+                            "A159: Respiratory tuberculosis unspecified"
                         )
 
                 # oi medications, must have HIV first
@@ -255,7 +255,7 @@ def register(app):
 
                 # add other STD dx
                 if "Benzathine Penicillin".lower() in all_medication_string:
-                    impression.append("[A539] Syphilis, unspecified")
+                    impression.append("A539: Syphilis, unspecified")
 
                 visit_entry = {
                     "date": convertToDate(date),
@@ -335,7 +335,7 @@ def register(app):
                     current_app.logger.warn(
                         f"Unable to import visit of "
                         f"patient HN {patient_model.hn} "
-                        f"on {ix['date']}"
+                        f"on {visit_entry['date']}"
                         f" with this error {e}, skipping."
                     )
                     continue

@@ -1,35 +1,41 @@
 from flask_restplus import Resource
-from marshmallow import validate
 from webargs import fields
 from webargs.flaskparser import use_args
 
-from hivclinic import db
-from hivclinic.models.patient_model import PatientModel
+from hivclinic.models.icd10_model import ICD10Model
+from hivclinic.schemas.icd10_schema import ICD10Schema
 
 from . import api
 
-is_unique = {
-    "field_name": fields.Str(
-        required=True,
-        validate=validate.OneOf(["hn", "clinicID", "governmentID", "napID"]),
-    ),
-    "keyword": fields.Str(required=True),
-}
 
-
-@api.route("/is_unique")
-class IsFieldUnique(Resource):
-    @api.doc("check_if_the_field_is_unique")
-    @use_args(is_unique, locations=("querystring",))
+@api.route("/icd10/search")
+class ICD10Resource(Resource):
+    @api.doc("search_icd10_entries")
+    @use_args(
+        {"keyword": fields.Str(required=True)}, locations=("querystring",)
+    )
     def get(self, args):
         """Check if the field is unique"""
-        exists = (
-            db.session.query(PatientModel.id)
+        icd10_schema = ICD10Schema(many=True)
+
+        icd10s_query = (
+            ICD10Model.query.order_by(ICD10Model.id)
             .filter(
-                getattr(PatientModel, args["field_name"]) == args["keyword"]
+                ICD10Model.icd10.ilike("%{}%".format(args["keyword"]))
+                | ICD10Model.description.ilike("%{}%".format(args["keyword"]))
             )
-            .scalar()
-            is None
+            .limit(10)
+            .all()
         )
 
-        return exists, 200
+        icd10s = icd10_schema.dump(icd10s_query)
+
+        # format icd10
+        icd10s_with_description = []
+
+        for item in icd10s:
+            icd10s_with_description.append(
+                f"{item['icd10']}: {item['description']}"
+            )
+
+        return icd10s_with_description, 200

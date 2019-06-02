@@ -31,6 +31,13 @@ class Config(object):
         self.SQLALCHEMY_DATABASE_URI = os.getenv("SQLALCHEMY_DATABASE_URI_DEV")
         self.SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+        self.MAX_NUMBER_OF_PATIENT_IN_SEARCH = os.getenv(
+            "MAX_NUMBER_OF_PATIENT_IN_SEARCH"
+        )
+        self.MAX_NUMBER_OF_HOSPITAL_IN_SEARCH = os.getenv(
+            "MAX_NUMBER_OF_HOSPITAL_IN_SEARCH"
+        )
+
         self.OVERDUE_VL_MONTHS = int(os.getenv("OVERDUE_VL_MONTHS")) or 12
         self.OVERDUE_FU_MONTHS = int(os.getenv("OVERDUE_FU_MONTHS")) or 12
 

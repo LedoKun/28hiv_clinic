@@ -95,7 +95,7 @@ class InvestigationSchema(BaseSchema):
             if key in skip_keys:
                 continue
 
-            if not data[key]:
+            if data[key]:
                 count_not_null = count_not_null + 1
 
         if not count_not_null >= 2:

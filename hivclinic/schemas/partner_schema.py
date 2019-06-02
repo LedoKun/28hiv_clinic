@@ -5,10 +5,11 @@ from . import BaseSchema
 
 
 class PartnerSchema(BaseSchema):
-    # deceased = fields.Str()
+    deceased = fields.Str(required=True)
 
-    # gender = fields.Str()
-    # HIVStatus = fields.Str()
+    sex = fields.Str(required=True)
+    gender = fields.Str(required=True)
+    HIVStatus = fields.Str(required=True)
     # PatientHIVStatusDisclosure = fields.Str()
     # HIVTreatmentOrPrevention = fields.Str()
 
