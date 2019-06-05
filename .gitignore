@@ -131,3 +131,4 @@ dmypy.json
 
 # Patient files
 *.json
+*.xlsx

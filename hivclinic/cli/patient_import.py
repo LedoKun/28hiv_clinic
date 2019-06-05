@@ -2,6 +2,7 @@ import json
 import re
 
 import click
+import pandas as pd
 from flask import current_app
 
 from hivclinic import db
@@ -126,9 +127,97 @@ def register(app):
 
             raise e
 
+    def replace_vl(vl_string):
+        if "< " in vl_string:
+            return -1
+
+        elif "FAILED" in vl_string:
+            return None
+
+        else:
+            return int(vl_string)
+
+    def convert_hn(hn_string):
+        # convert 18-612802282 to 2282/61-28
+        regex_string = r"18-([\d]{2})([\d]{2})([\d]*)"
+        match = re.search(regex_string, hn_string)
+
+        try:
+            hn = (
+                f"{match.group(3).lstrip('0')}/"
+                f"{match.group(1)}-{match.group(2)}"
+            )
+            return hn
+
+        except Exception:
+            return None
+
+    @patient.command()
+    @click.argument("xlsx_path")
+    def importvl(xlsx_path):
+        """Import VL from xlsx file"""
+        cols = ["Requested Date", "HN", "VL Result"]
+
+        excel_df = pd.read_excel(xlsx_path)
+
+        vl_df = excel_df[cols]
+        vl_df.loc[:, "VL Result"] = vl_df["VL Result"].apply(replace_vl)
+        vl_df.loc[:, "HN"] = vl_df["HN"].apply(convert_hn)
+        vl_df = vl_df.dropna(how="any")
+
+        vl_list = vl_df.values.tolist()
+
+        # add ix
+        for vl_item in vl_list:
+            vl_date, vl_hn, vl_result = vl_item
+
+            patient_id = (
+                db.session.query(PatientModel.id)
+                .filter(PatientModel.hn == vl_hn)
+                .first()
+            )
+
+            if patient_id is not None:
+                # find previous data
+                ix_model = (
+                    InvestigationModel.query.filter(
+                        InvestigationModel.imported == True  # noqa
+                    )
+                    .filter(InvestigationModel.patientID == patient_id)
+                    .filter(InvestigationModel.date == vl_date)
+                    .first()
+                )
+
+                if ix_model:
+                    ix_model.viralLoad = vl_result
+
+                else:
+                    ix_data = {
+                        "date": vl_date,
+                        "patientID": patient_id,
+                        "viralLoad": vl_result,
+                        "imported": True,
+                    }
+
+                    ix_model = InvestigationModel(**ix_data)
+
+                db.session.add(ix_model)
+
+            else:
+                # no patient found
+                current_app.logger.warn(
+                    f"Unable to import viral load result of "
+                    f"patient HN {vl_hn} "
+                    f"on {vl_date}"
+                    f" as the patient is not in the DB, skipping."
+                )
+                continue
+
+        db.session.commit()
+
     @patient.command()
     @click.argument("json_path")
-    def importjson(json_path):
+    def importpatient(json_path):
         """Import patient from json file"""
         with open(json_path, "r") as file:
             patients = json.load(file)
@@ -290,7 +379,7 @@ def register(app):
 
                 except Exception as e:
                     current_app.logger.warn(
-                        f"Unable to import visit of "
+                        f"Unable to import Ix of "
                         f"patient HN {patient_model.hn} "
                         f"on {ix['date']}"
                         f" with this error {e}, skipping."

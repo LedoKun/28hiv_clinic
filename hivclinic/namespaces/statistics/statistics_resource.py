@@ -1,19 +1,17 @@
-from flask_restplus import Resource
-from sqlalchemy import func
 from datetime import date
+
 from dateutil.relativedelta import relativedelta
 from flask import current_app
+from flask_restplus import Resource
+from sqlalchemy import func
 
 from hivclinic import db
+from hivclinic.models.investigation_model import InvestigationModel
+from hivclinic.models.partner_model import PartnerModel
 from hivclinic.models.patient_model import PatientModel
 from hivclinic.models.visit_model import VisitModel
-from hivclinic.models.investigation_model import InvestigationModel
 
 from . import api
-
-
-# OVERDUE_VL_MONTHS = 12
-# OVERDUE_FU_MONTHS = 12
 
 
 @api.route("/dashboard")
@@ -204,3 +202,93 @@ class DashboardStatisticsResource(Resource):
             "overdueVL": self.overdue_vl(),
             "overdueFU": self.overdue_fu(),
         }
+
+
+@api.route("/")
+class StatisticsResource(Resource):
+    def queryDataDict(self):
+        subquery_firstVisit = (
+            db.session.query(
+                VisitModel.patientID,
+                func.min(VisitModel.date).label("firstVisit"),
+            )
+            .group_by(VisitModel.patientID)
+            .subquery()
+        )
+
+        subquery_ARVStartDate = (
+            db.session.query(
+                VisitModel.patientID,
+                func.min(VisitModel.date).label("ARVStartDate"),
+            )
+            .filter(VisitModel.arvMedications.isnot(None))
+            .group_by(VisitModel.patientID)
+            .subquery()
+        )
+
+        subquery_firstAntiHIV = (
+            db.session.query(
+                InvestigationModel.patientID,
+                func.min(InvestigationModel.date).label("firstAntiHIV"),
+            )
+            .filter(InvestigationModel.antiHIV.isnot(None))
+            .group_by(InvestigationModel.patientID)
+            .subquery()
+        )
+
+        # subquery_numberOfPartners = (
+        #     db.session.query(
+        #         PartnerModel.patientID,
+        #         func.count(PartnerModel.id).label("numberOfPartners"),
+        #     )
+        #     .group_by(PartnerModel.patientID)
+        #     .subquery()
+        # )
+
+        subquery_firstInvestigation = db.session.query(
+            InvestigationModel
+        ).group_by
+
+        subquery_firstInvestigation = db.session.query(
+            func.min(book_alias.time_added)
+        ).filter(
+            func.date(book_alias.time_added) == func.date(Book.time_added)
+        )
+
+        patients = (
+            db.session.query(
+                PatientModel,
+                subquery_firstVisit.c.firstVisit,
+                subquery_ARVStartDate.c.ARVStartDate,
+                subquery_firstAntiHIV.c.firstAntiHIV,
+                # subquery_numberOfPartners.c.numberOfPartners,
+            )
+            .join(
+                subquery_firstVisit,
+                subquery_firstVisit.c.patientID == PatientModel.id,
+            )
+            .join(
+                subquery_ARVStartDate,
+                subquery_ARVStartDate.c.patientID == PatientModel.id,
+            )
+            .join(
+                subquery_firstAntiHIV,
+                subquery_firstAntiHIV.c.patientID == PatientModel.id,
+            )
+            # .join(
+            #     subquery_numberOfPartners,
+            #     subquery_numberOfPartners.c.patientID == PatientModel.id
+            # )
+            .all()
+        )
+
+        return patients
+
+    def get(self):
+        """Provide Clinic Statistics"""
+
+        import sys
+
+        print(self.queryDataDict(), file=sys.stdout)
+
+        return None
