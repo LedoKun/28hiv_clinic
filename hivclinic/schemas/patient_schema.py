@@ -20,7 +20,6 @@ class PatientSchema(BaseSchema):
     # gender = fields.String()
     # maritalStatus = fields.String()
     # nationality = fields.String()
-    # educationLevel = fields.String()
     healthInsurance = fields.String(required=True)
 
     # address = fields.String()
