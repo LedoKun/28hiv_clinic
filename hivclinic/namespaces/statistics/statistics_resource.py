@@ -1,14 +1,17 @@
 from datetime import date
+from io import BytesIO
 
 from dateutil.relativedelta import relativedelta
-from flask import current_app
+from flask import current_app, send_file
 from flask_restplus import Resource
-from sqlalchemy import func, and_
-import pandas as pd
+from sqlalchemy import func
+from webargs import fields
+from webargs.flaskparser import use_args
 
+import pandas as pd
 from hivclinic import db
+from hivclinic.helpers.data_dict_maker.data_dict_maker import dataDictMaker
 from hivclinic.models.investigation_model import InvestigationModel
-from hivclinic.models.partner_model import PartnerModel
 from hivclinic.models.patient_model import PatientModel
 from hivclinic.models.visit_model import VisitModel
 
@@ -17,6 +20,7 @@ from . import api
 
 @api.route("/dashboard")
 class DashboardStatisticsResource(Resource):
+    @api.doc("generate_statistics_for_dashboard")
     @staticmethod
     def count_patient():
         # count total (registered patients)
@@ -205,247 +209,77 @@ class DashboardStatisticsResource(Resource):
         }
 
 
-@api.route("/")
-class StatisticsResource(Resource):
-    def queryPatientDF(self):
-        # columns to be converted to string
-        columns_to_str = ["id"]
-        # columns to be converted to iso date
-        columns_to_iso_date = [
-            "dateOfBirth",
-            "firstVisit",
-            "ARVStartDate",
-            "firstPositiveAntiHIVDate",
-            "lastLVLabDate",
-            "lastCD4LabDate",
-            "firstCD4LabDate",
-        ]
-
-        # find first visit
-        subquery_firstVisit = (
-            db.session.query(
-                VisitModel.patientID,
-                func.min(VisitModel.date).label("firstVisit"),
-            )
-            .group_by(VisitModel.patientID)
-            .subquery()
-        )
-
-        # find arv start date
-        subquery_ARVStartDate = (
-            db.session.query(
-                VisitModel.patientID,
-                func.min(VisitModel.date).label("ARVStartDate"),
-            )
-            .filter(VisitModel.arvMedications.isnot(None))
-            .group_by(VisitModel.patientID)
-            .subquery()
-        )
-
-        # find first antihiv date
-        subquery_firstPositiveAntiHIVDate = (
-            db.session.query(
-                InvestigationModel.patientID,
-                func.min(InvestigationModel.date).label(
-                    "firstPositiveAntiHIVDate"
-                ),
-            )
-            .filter(InvestigationModel.antiHIV == "Positive")
-            .group_by(InvestigationModel.patientID)
-            .subquery()
-        )
-
-        # find number of partners
-        subquery_numberOfPartners = (
-            db.session.query(
-                PartnerModel.patientID,
-                func.count(PartnerModel.id).label("numberOfPartners"),
-            )
-            .group_by(PartnerModel.patientID)
-            .subquery()
-        )
-
-        # find last VL date
-        subquery_lastVLLabDate = (
-            db.session.query(
-                InvestigationModel.patientID,
-                func.max(VisitModel.date).label("lastLVLabDate"),
-            )
-            .group_by(InvestigationModel.patientID)
-            .filter(InvestigationModel.viralLoad.isnot(None))
-            .subquery()
-        )
-
-        # find last VL result and date
-        subquery_lastVLResults = (
-            db.session.query(
-                InvestigationModel.date.label("lastLVLabDate"),
-                InvestigationModel.viralLoad,
-                InvestigationModel.patientID,
-            )
-            .outerjoin(
-                subquery_lastVLLabDate,
-                and_(
-                    subquery_lastVLLabDate.c.patientID
-                    == InvestigationModel.patientID,
-                    subquery_lastVLLabDate.c.lastLVLabDate
-                    == InvestigationModel.date,
-                ),
-            )
-            .filter(InvestigationModel.viralLoad.isnot(None))
-            .subquery()
-        )
-
-        # find last CD4 date
-        subquery_lastCD4LabDate = (
-            db.session.query(
-                InvestigationModel.patientID,
-                func.max(VisitModel.date).label("lastCD4LabDate"),
-            )
-            .group_by(InvestigationModel.patientID)
-            .filter(InvestigationModel.absoluteCD4.isnot(None))
-            .subquery()
-        )
-
-        # find last CD4, %CD4 results and date
-        subquery_lastCD4Results = (
-            db.session.query(
-                InvestigationModel.date.label("lastCD4LabDate"),
-                InvestigationModel.absoluteCD4.label("lastCD4Result"),
-                InvestigationModel.percentCD4.label("lastPercentCD4Result"),
-                InvestigationModel.patientID,
-            )
-            .outerjoin(
-                subquery_lastCD4LabDate,
-                and_(
-                    subquery_lastCD4LabDate.c.patientID
-                    == InvestigationModel.patientID,
-                    subquery_lastCD4LabDate.c.lastCD4LabDate
-                    == InvestigationModel.date,
-                ),
-            )
-            .filter(InvestigationModel.absoluteCD4.isnot(None))
-            .filter(InvestigationModel.percentCD4.isnot(None))
-            .subquery()
-        )
-
-        # find first CD4 date
-        subquery_firstCD4LabDate = (
-            db.session.query(
-                InvestigationModel.patientID,
-                func.max(VisitModel.date).label("firstCD4LabDate"),
-            )
-            .group_by(InvestigationModel.patientID)
-            .filter(InvestigationModel.absoluteCD4.isnot(None))
-            .subquery()
-        )
-
-        # find first CD4, %CD4 results and date
-        subquery_firstCD4Results = (
-            db.session.query(
-                InvestigationModel.date.label("firstCD4LabDate"),
-                InvestigationModel.absoluteCD4.label("firstCD4Result"),
-                InvestigationModel.percentCD4.label("firstPercentCD4Result"),
-                InvestigationModel.patientID,
-            )
-            .outerjoin(
-                subquery_firstCD4LabDate,
-                and_(
-                    subquery_firstCD4LabDate.c.patientID
-                    == InvestigationModel.patientID,
-                    subquery_firstCD4LabDate.c.firstCD4LabDate
-                    == InvestigationModel.date,
-                ),
-            )
-            .filter(InvestigationModel.absoluteCD4.isnot(None))
-            .filter(InvestigationModel.percentCD4.isnot(None))
-            .subquery()
-        )
-
-        # construct data dict
-        data_dict = (
-            db.session.query(
-                PatientModel.id,
-                PatientModel.clinicID,
-                PatientModel.hn,
-                PatientModel.governmentID,
-                PatientModel.napID,
-                PatientModel.name,
-                PatientModel.dateOfBirth,
-                PatientModel.sex,
-                PatientModel.gender,
-                PatientModel.maritalStatus,
-                PatientModel.nationality,
-                PatientModel.healthInsurance,
-                PatientModel.phoneNumbers,
-                PatientModel.relativePhoneNumbers,
-                PatientModel.referralStatus,
-                PatientModel.referredFrom,
-                PatientModel.riskBehaviors,
-                PatientModel.patientStatus,
-                subquery_firstVisit.c.firstVisit,
-                subquery_ARVStartDate.c.ARVStartDate,
-                subquery_firstPositiveAntiHIVDate.c.firstPositiveAntiHIVDate,
-                subquery_numberOfPartners.c.numberOfPartners,
-                subquery_lastVLResults.c.lastLVLabDate,
-                subquery_lastVLResults.c.viralLoad,
-                subquery_lastCD4Results.c.lastCD4LabDate,
-                subquery_lastCD4Results.c.lastCD4Result,
-                subquery_lastCD4Results.c.lastPercentCD4Result,
-                subquery_firstCD4Results.c.firstCD4LabDate,
-                subquery_firstCD4Results.c.firstCD4Result,
-                subquery_firstCD4Results.c.firstPercentCD4Result,
-            )
-            .outerjoin(
-                subquery_firstVisit,
-                subquery_firstVisit.c.patientID == PatientModel.id,
-            )
-            .outerjoin(
-                subquery_ARVStartDate,
-                subquery_ARVStartDate.c.patientID == PatientModel.id,
-            )
-            .outerjoin(
-                subquery_firstPositiveAntiHIVDate,
-                subquery_firstPositiveAntiHIVDate.c.patientID
-                == PatientModel.id,
-            )
-            .outerjoin(
-                subquery_numberOfPartners,
-                subquery_numberOfPartners.c.patientID == PatientModel.id,
-            )
-            .outerjoin(
-                subquery_lastVLResults,
-                subquery_lastVLResults.c.patientID == PatientModel.id,
-            )
-            .outerjoin(
-                subquery_lastCD4Results,
-                subquery_lastCD4Results.c.patientID == PatientModel.id,
-            )
-            .outerjoin(
-                subquery_firstCD4Results,
-                subquery_firstCD4Results.c.patientID == PatientModel.id,
-            )
-            # .filter(PatientModel.clinicID.isnot(None))
-            .statement
-        )
-
-        df = pd.read_sql(data_dict, db.session.bind)
-
-        # convert to str
-        df[columns_to_str] = df[columns_to_str].astype(str, errors="ignore")
-
-        # convert to iso date
-        df[columns_to_iso_date] = df[columns_to_iso_date].applymap(
-            lambda date_obj: date_obj.strftime("%Y-%m-%d")
-            if isinstance(date_obj, date)
-            else date_obj
-        )
-
-        return df
-
-    def get(self):
+@api.route("/data_dict")
+class DataDictResource(Resource):
+    @api.doc("generate_patient_data_dict")
+    @use_args({"as_file": fields.Boolean(missing=False)})
+    def get(self, args):
         """Provide Clinic Statistics"""
-        patientDataDict_df = self.queryPatientDF()
+        patientDataDict_df = dataDictMaker(
+            dateFormat="%d-%m-%Y", joinArrayBy=", ", convertUUID=True
+        )
+        patientDataDict_df = patientDataDict_df.where(
+            patientDataDict_df.notnull(), None
+        )
 
-        return patientDataDict_df.to_dict("records")
+        if args["as_file"]:
+            # create an output stream
+            output = BytesIO()
 
+            with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                patientDataDict_df.to_excel(writer, sheet_name="DataDict")
+
+            output.seek(0)
+
+            return send_file(
+                output,
+                attachment_filename="data_dict.xlsx",
+                as_attachment=True,
+            )
+
+        else:
+            column_names = [
+                {"field": "clinicID", "label": "ID"},
+                {"field": "hn", "label": "HN"},
+                {"field": "governmentID", "label": "Gov't ID"},
+                {"field": "napID", "label": "NAP"},
+                {"field": "name", "label": "Name"},
+                {"field": "dateOfBirth", "label": "DOB"},
+                {"field": "sex", "label": "Sex"},
+                {"field": "gender", "label": "Gender"},
+                {"field": "maritalStatus", "label": "Marital"},
+                {"field": "nationality", "label": "Nationality"},
+                {"field": "healthInsurance", "label": "Scheme"},
+                {"field": "phoneNumbers", "label": "Tel"},
+                {"field": "relativePhoneNumbers", "label": "Other Tel"},
+                {"field": "referralStatus", "label": "Referral"},
+                {"field": "referredFrom", "label": "From"},
+                {"field": "riskBehaviors", "label": "Risks"},
+                {"field": "patientStatus", "label": "Status"},
+                {"field": "firstVisit", "label": "1st Visit"},
+                {
+                    "field": "firstPositiveAntiHIVDate",
+                    "label": "+ve Anti-HIV",
+                },
+                {"field": "arvInitiationDate", "label": "Start ARV"},
+                {"field": "initialARV", "label": "1st ARV"},
+                {
+                    "field": "lastARVPrescriptionDate",
+                    "label": "Last Seen",
+                },
+                {"field": "currentARV", "label": "Last ARV"},
+                {"field": "numberOfPartners", "label": "# Partners"},
+                {"field": "firstCD4LabDate", "label": "1st CD4"},
+                {"field": "firstCD4Result", "label": "1st CD4 Result"},
+                {"field": "firstPercentCD4Result", "label": "1st %CD4"},
+                {"field": "lastCD4LabDate", "label": "Last CD4"},
+                {"field": "lastCD4Result", "label": "Last CD4 Result"},
+                {"field": "lastPercentCD4Result", "label": "Last %CD4"},
+                {"field": "lastViralLoadDate", "label": "Last VL"},
+                {"field": "lastViralLoad", "label": "Last VL Result"},
+            ]
+
+            return {
+                "tableColumns": column_names,
+                "tableData": patientDataDict_df.to_dict("record"),
+            }
