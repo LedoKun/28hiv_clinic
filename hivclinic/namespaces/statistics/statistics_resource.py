@@ -215,12 +215,55 @@ class DataDictResource(Resource):
     @use_args({"as_file": fields.Boolean(missing=False)})
     def get(self, args):
         """Provide Clinic Statistics"""
+        column_names = [
+            "ID",
+            "Clinic ID",
+            "HN",
+            "Government ID",
+            "NAP",
+            "Name",
+            "Date of birth",
+            "Age",
+            "Sex",
+            "Gender",
+            "Marital status",
+            "Nationality",
+            "Healthcare scheme",
+            "Phone number",
+            "Relative's phone number",
+            "Referral status",
+            "Referred from",
+            "Risk behaviors",
+            "Patient status",
+            "Number of partners",
+            "First visit",
+            "Anti-HIV positive on",
+            "Start ARV on",
+            "First ARV regimen",
+            "Last ARV prescription",
+            "Last ARV regimen",
+            "Last viral load on",
+            "Last viral load result",
+            "First CD4 on",
+            "First CD4 result",
+            "First %CD4 result",
+            "Last CD4 on",
+            "Last CD4 result",
+            "Last %CD4 result",
+        ]
+
         patientDataDict_df = dataDictMaker(
-            dateFormat="%d-%m-%Y", joinArrayBy=", ", convertUUID=True
+            dateFormat="%d-%m-%Y",
+            joinArrayBy=", ",
+            calculateAgeAsStr=True,
+            convertUUID=True
         )
         patientDataDict_df = patientDataDict_df.where(
             patientDataDict_df.notnull(), None
         )
+
+        # set column names
+        patientDataDict_df.columns = column_names
 
         if args["as_file"]:
             # create an output stream
@@ -238,48 +281,9 @@ class DataDictResource(Resource):
             )
 
         else:
-            column_names = [
-                {"field": "clinicID", "label": "ID"},
-                {"field": "hn", "label": "HN"},
-                {"field": "governmentID", "label": "Gov't ID"},
-                {"field": "napID", "label": "NAP"},
-                {"field": "name", "label": "Name"},
-                {"field": "dateOfBirth", "label": "DOB"},
-                {"field": "sex", "label": "Sex"},
-                {"field": "gender", "label": "Gender"},
-                {"field": "maritalStatus", "label": "Marital"},
-                {"field": "nationality", "label": "Nationality"},
-                {"field": "healthInsurance", "label": "Scheme"},
-                {"field": "phoneNumbers", "label": "Tel"},
-                {"field": "relativePhoneNumbers", "label": "Other Tel"},
-                {"field": "referralStatus", "label": "Referral"},
-                {"field": "referredFrom", "label": "From"},
-                {"field": "riskBehaviors", "label": "Risks"},
-                {"field": "patientStatus", "label": "Status"},
-                {"field": "firstVisit", "label": "1st Visit"},
-                {
-                    "field": "firstPositiveAntiHIVDate",
-                    "label": "+ve Anti-HIV",
-                },
-                {"field": "arvInitiationDate", "label": "Start ARV"},
-                {"field": "initialARV", "label": "1st ARV"},
-                {
-                    "field": "lastARVPrescriptionDate",
-                    "label": "Last Seen",
-                },
-                {"field": "currentARV", "label": "Last ARV"},
-                {"field": "numberOfPartners", "label": "# Partners"},
-                {"field": "firstCD4LabDate", "label": "1st CD4"},
-                {"field": "firstCD4Result", "label": "1st CD4 Result"},
-                {"field": "firstPercentCD4Result", "label": "1st %CD4"},
-                {"field": "lastCD4LabDate", "label": "Last CD4"},
-                {"field": "lastCD4Result", "label": "Last CD4 Result"},
-                {"field": "lastPercentCD4Result", "label": "Last %CD4"},
-                {"field": "lastViralLoadDate", "label": "Last VL"},
-                {"field": "lastViralLoad", "label": "Last VL Result"},
-            ]
-
-            return {
-                "tableColumns": column_names,
-                "tableData": patientDataDict_df.to_dict("record"),
+            table_data = {
+                "colHeaders": column_names,
+                "data": patientDataDict_df.values.tolist()
             }
+
+            return table_data, 200

@@ -1,4 +1,5 @@
 from datetime import date
+from dateutil.relativedelta import relativedelta
 
 from sqlalchemy import and_, func, or_
 
@@ -10,8 +11,21 @@ from hivclinic.models.patient_model import PatientModel
 from hivclinic.models.visit_model import VisitModel
 
 
+def calculate_age_string(date_of_birth):
+    r = relativedelta(pd.to_datetime('now'), date_of_birth) 
+    return '{} years {} months {} days'.format(r.years, r.months, r.days)
+
+
+def calculate_age_year(date_of_birth):
+    r = relativedelta(pd.to_datetime('now'), date_of_birth) 
+    return r.years
+
+
 def dataDictMaker(
-    dateFormat: str = None, joinArrayBy: str = None, convertUUID: bool = False
+    dateFormat: str = None,
+    joinArrayBy: str = None,
+    calculateAgeAsStr: bool = False,
+    convertUUID: bool = False
 ):
     # columns to be converted to string
     columns_to_str = ["id"]
@@ -341,6 +355,17 @@ def dataDictMaker(
     )
 
     df = pd.read_sql(data_dict, db.session.bind)
+
+    # calculate age
+    if calculateAgeAsStr:
+        age_df = df["dateOfBirth"].apply(calculate_age_string)
+        
+
+    else:
+        age_df = df["dateOfBirth"].apply(calculate_age_year)
+
+    age_list = age_df.values.tolist()
+    df.insert(7, "Age", age_list) 
 
     # convert to str
     if convertUUID:
