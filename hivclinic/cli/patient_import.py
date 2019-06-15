@@ -85,7 +85,7 @@ def register(app):
             day, month, year = match.groups()
             year = int(year)
 
-            if year > 2500:
+            if year >= 2100:
                 year = year - 543
 
             date_str = f"{year}-{month}-{day}"

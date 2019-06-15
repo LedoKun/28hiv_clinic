@@ -29,6 +29,10 @@ class PatientModel(BaseModel):
     gender = db.Column(db.Unicode())
     maritalStatus = db.Column(db.Unicode())
     nationality = db.Column(db.Unicode())
+
+    occupation = db.Column(db.Unicode())
+    education = db.Column(db.Unicode())
+
     healthInsurance = db.Column(db.Unicode(), nullable=False)
 
     phoneNumbers = db.Column(ARRAY(db.Unicode()))

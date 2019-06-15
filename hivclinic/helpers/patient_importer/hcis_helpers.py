@@ -75,7 +75,7 @@ def convertToDate(date_str: str):
     # convert to AD
     date_str = date_str.split("/")
 
-    if int(date_str[2]) > 2500:
+    if int(date_str[2]) >= 2100:
         date_str[2] = int(date_str[2]) - 543
 
     return f"{date_str[0]}/{date_str[1]}/{date_str[2]}"
@@ -162,8 +162,11 @@ def praseTwoTablePage(
     waitForLoad(driver)
 
     elements = driver.find_elements_by_xpath(date_element_xpath)
+    is_first_element = True
 
     for element in elements:
+        current_page_source = driver.page_source
+
         date_str = element.text.split(element_text_split_by)[0]
         date_str = convertToDate(date_str)
 
@@ -176,6 +179,16 @@ def praseTwoTablePage(
 
         # wait
         waitForLoad(driver)
+
+        if not is_first_element:
+            WebDriverWait(driver, EXPLICIT_WAIT).until(
+                lambda d: (
+                    driver.page_source != current_page_source
+                )
+            )
+
+        else:
+            is_first_element = False
 
         # get list of subelements
         subelement_result = elementsPraser(page_source=driver.page_source)
@@ -327,35 +340,35 @@ def praseDermographic(page_source, hn):
 
 def praseDermographicTab2(page_source):
     soup = BeautifulSoup(page_source, "lxml")
-    address = ""
+    # address = ""
     phoneNumbers = []
 
-    # address
-    st_number = (
-        soup.find("input", {"id": "objdw_ex_addr_0_4"}).get("value") or ""
-    )
-    moo = soup.find("input", {"id": "objdw_ex_addr_0_5"}).get("value") or ""
-    soi = soup.find("input", {"id": "objdw_ex_addr_0_6"}).get("value") or ""
-    st = soup.find("input", {"id": "objdw_ex_addr_0_7"}).get("value") or ""
-    province = (
-        soup.find("input", {"id": "objdw_ex_addr_0_9"}).get("value") or ""
-    )
-    country = (
-        soup.find("input", {"id": "objdw_ex_addr_0_16"}).get("value") or ""
-    )
-    zip_code = (
-        soup.find("input", {"id": "objdw_ex_addr_0_13"}).get("value") or ""
-    )
+    # # address
+    # st_number = (
+    #     soup.find("input", {"id": "objdw_ex_addr_0_4"}).get("value") or ""
+    # )
+    # moo = soup.find("input", {"id": "objdw_ex_addr_0_5"}).get("value") or ""
+    # soi = soup.find("input", {"id": "objdw_ex_addr_0_6"}).get("value") or ""
+    # st = soup.find("input", {"id": "objdw_ex_addr_0_7"}).get("value") or ""
+    # province = (
+    #     soup.find("input", {"id": "objdw_ex_addr_0_9"}).get("value") or ""
+    # )
+    # country = (
+    #     soup.find("input", {"id": "objdw_ex_addr_0_16"}).get("value") or ""
+    # )
+    # zip_code = (
+    #     soup.find("input", {"id": "objdw_ex_addr_0_13"}).get("value") or ""
+    # )
 
-    address = (
-        f"{'เลขที่/อาคาร '*bool(st_number)}{st_number}{' '*bool(st_number)}"
-        f"{'หมู่ที่ '*bool(moo)}{moo}{' '*bool(moo)}"
-        f"{'ตรอก/ซอย'*bool(soi)}{soi}{' '*bool(soi)}"
-        f"{'ถนน'*bool(st)}{st}{' '*bool(st)}"
-        f"{province}{' '*bool(province)}"
-        f"{'ประเทศ'*bool(country)}{country}{' '*bool(country)}"
-        f"{zip_code}"
-    )
+    # address = (
+    #     f"{'เลขที่/อาคาร '*bool(st_number)}{st_number}{' '*bool(st_number)}"
+    #     f"{'หมู่ที่ '*bool(moo)}{moo}{' '*bool(moo)}"
+    #     f"{'ตรอก/ซอย'*bool(soi)}{soi}{' '*bool(soi)}"
+    #     f"{'ถนน'*bool(st)}{st}{' '*bool(st)}"
+    #     f"{province}{' '*bool(province)}"
+    #     f"{'ประเทศ'*bool(country)}{country}{' '*bool(country)}"
+    #     f"{zip_code}"
+    # )
 
     # phones
     phone_base_id = "objdw_ex_addr_0_"
@@ -366,7 +379,7 @@ def praseDermographicTab2(page_source):
         if phone:
             phoneNumbers.append(phone)
 
-    return {"address": address, "phoneNumbers": phoneNumbers}
+    return {"phoneNumbers": phoneNumbers}
 
 
 def isElementPresent(driver, by, value):

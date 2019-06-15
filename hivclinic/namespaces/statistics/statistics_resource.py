@@ -215,55 +215,12 @@ class DataDictResource(Resource):
     @use_args({"as_file": fields.Boolean(missing=False)})
     def get(self, args):
         """Provide Clinic Statistics"""
-        column_names = [
-            "ID",
-            "Clinic ID",
-            "HN",
-            "Government ID",
-            "NAP",
-            "Name",
-            "Date of birth",
-            "Age",
-            "Sex",
-            "Gender",
-            "Marital status",
-            "Nationality",
-            "Healthcare scheme",
-            "Phone number",
-            "Relative's phone number",
-            "Referral status",
-            "Referred from",
-            "Risk behaviors",
-            "Patient status",
-            "Number of partners",
-            "First visit",
-            "Anti-HIV positive on",
-            "Start ARV on",
-            "First ARV regimen",
-            "Last ARV prescription",
-            "Last ARV regimen",
-            "Last viral load on",
-            "Last viral load result",
-            "First CD4 on",
-            "First CD4 result",
-            "First %CD4 result",
-            "Last CD4 on",
-            "Last CD4 result",
-            "Last %CD4 result",
-        ]
-
         patientDataDict_df = dataDictMaker(
             dateFormat="%d-%m-%Y",
             joinArrayBy=", ",
             calculateAgeAsStr=True,
             convertUUID=True
         )
-        patientDataDict_df = patientDataDict_df.where(
-            patientDataDict_df.notnull(), None
-        )
-
-        # set column names
-        patientDataDict_df.columns = column_names
 
         if args["as_file"]:
             # create an output stream
@@ -282,7 +239,7 @@ class DataDictResource(Resource):
 
         else:
             table_data = {
-                "colHeaders": column_names,
+                "colHeaders": list(patientDataDict_df.columns),
                 "data": patientDataDict_df.values.tolist()
             }
 

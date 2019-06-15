@@ -164,7 +164,6 @@ class HCISImporter(Importer):
             page_source=self.driver.page_source
         )
 
-        dermographic["address"] = dermographicTab2["address"]
         dermographic["phoneNumbers"] = dermographicTab2["phoneNumbers"]
 
         # extract info
