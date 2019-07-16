@@ -9,6 +9,7 @@ from webargs import fields
 from webargs.flaskparser import use_args
 
 import pandas as pd
+import numpy as np
 from hivclinic import db
 from hivclinic.helpers.data_dict_maker.data_dict_maker import dataDictMaker
 from hivclinic.models.investigation_model import InvestigationModel
@@ -219,7 +220,7 @@ class DataDictResource(Resource):
             dateFormat="%d-%m-%Y",
             joinArrayBy=", ",
             calculateAgeAsStr=True,
-            convertUUID=True
+            convertUUID=True,
         )
 
         if args["as_file"]:
@@ -240,7 +241,441 @@ class DataDictResource(Resource):
         else:
             table_data = {
                 "colHeaders": list(patientDataDict_df.columns),
-                "data": patientDataDict_df.values.tolist()
+                "data": patientDataDict_df.values.tolist(),
             }
 
             return table_data, 200
+
+
+@api.route("/overview")
+class OverviewResource(Resource):
+    @staticmethod
+    def getNumberOfNewPatientsStats(df, column_name):
+        df = df.loc[:, [column_name]]
+
+        count_data = (
+            df.groupby(
+                [
+                    df[column_name].dt.year.rename("Year"),
+                    df[column_name].dt.month.rename("Month"),
+                ]
+            )
+            .agg({"count"})
+            .sort_index()
+        )
+
+        count_data.columns = ["New"]
+        count_data["Total"] = count_data.cumsum()
+
+        return count_data.T
+
+    @staticmethod
+    def getNumberStats(df, db_column_name, count_column_name):
+        count_data = (
+            df.groupby(
+                [
+                    df[db_column_name].dt.year.rename("Year"),
+                    df[db_column_name].dt.month.rename("Month"),
+                ]
+            )
+            .agg({"count"})
+            .sort_index()
+        )
+
+        count_data.columns = [count_column_name]
+
+        return count_data.T
+
+    @staticmethod
+    def getWeeklyHeatmap(df, column_name, count_column_name):
+        df = df.loc[:, [column_name]]
+
+        count_data = (
+            df.groupby([df[column_name].dt.weekday_name.rename("Day")])
+            .agg({"count"})
+            .sort_index()
+        )
+
+        count_data.columns = [count_column_name]
+
+        return count_data.T
+
+    @staticmethod
+    def getNationalityStats(df):
+        df = df.loc[:, ["ID", "Nationality", "Healthcare scheme"]]
+
+        count_data = (
+            df.groupby(
+                [df.loc[:, "Nationality"], df.loc[:, "Healthcare scheme"]]
+            )
+            .agg({"count"})
+            .sort_index()
+        )
+
+        count_data.columns = ["Cases"]
+
+        return count_data
+
+    @staticmethod
+    def calculate_age(born):
+        if isinstance(born, date):
+            today = date.today()
+            age = (
+                today.year
+                - born.year
+                - ((today.month, today.day) < (born.month, born.day))
+            )
+
+            return age
+
+        else:
+            return None
+
+    @staticmethod
+    def getAgeCrossedTable(df, column_names=[], no_data_as="No Data"):
+        bins = np.arange(0, 1000, 10)
+        groupby_columns = [pd.cut(df.Age, bins)] + column_names
+
+        df.drop(["Age"], axis=1, inplace=True)
+        df.fillna(no_data_as, inplace=True)
+
+        count_data = df.groupby(groupby_columns).agg({"count"}).sort_index()
+
+        # rename columns
+        count_data.columns = ["#"]
+
+        return count_data
+
+    @staticmethod
+    def grouppedTable(df, column_names=[], no_data_as="No Data"):
+        df.fillna(no_data_as, inplace=True)
+        count_data = df.groupby(column_names).agg({"count"}).sort_index()
+
+        # rename columns
+        count_data.columns = ["#"]
+
+        count_data.sort_index(inplace=True)
+
+        return count_data
+
+    @staticmethod
+    def getCD4CrossedTable(
+        df, column_names=[], cd4_column_name=None, no_data_as="No Data"
+    ):
+        df.dropna(axis="index", subset=[cd4_column_name], inplace=True)
+
+        bins = [-1, 200, 350, 5000]
+        labels = ["[0, 200]", "(200, 350]", "(350, ∞)"]
+
+        groupby_columns = [
+            pd.cut(df.loc[:, cd4_column_name], bins=bins, labels=labels)
+        ] + column_names
+
+        df.drop([cd4_column_name], axis=1, inplace=True)
+        df.fillna(no_data_as, inplace=True)
+
+        count_data = df.groupby(groupby_columns).agg({"count"}).sort_index()
+
+        # rename columns
+        count_data.columns = ["#"]
+
+        return count_data
+
+    @staticmethod
+    def getVLTable(
+        df, column_names=[], vl_column_name=None, no_data_as="No Data"
+    ):
+        df.dropna(axis="index", subset=[vl_column_name], inplace=True)
+        df.replace("Undetectable", -1, inplace=True)
+
+        bins = [-2, 0, 200, 1000, 9999999]
+        labels = ["Undetectable", "VL ≤ 200", "VL ≤ 1000", "VL > 1000"]
+
+        groupby_columns = [
+            pd.cut(df.loc[:, vl_column_name], bins=bins, labels=labels)
+        ] + column_names
+
+        df.drop([vl_column_name], axis=1, inplace=True)
+        df.fillna(no_data_as, inplace=True)
+
+        count_data = df.groupby(groupby_columns).agg({"count"}).sort_index()
+
+        # rename columns
+        count_data.columns = ["#"]
+
+        return count_data
+
+    @api.doc("generate_overview_statistics")
+    @use_args(
+        {
+            "startDate": fields.Date(missing=date.min),
+            "endDate": fields.Date(missing=date.max),
+        }
+    )
+    def get(self, args):
+        """Provide Clinic's Overview Statistics"""
+        patientDataDict_df = dataDictMaker(
+            joinArrayBy=", ",
+            calculateAgeAsStr=True,
+            convertUUID=True,
+            startDate=args["startDate"],
+            endDate=args["endDate"],
+        )
+
+        col_name = "Register date"
+        patientDataDict_df[col_name] = pd.to_datetime(
+            patientDataDict_df[col_name], errors="coerce"
+        )
+
+        # calculate age
+        patientDataDict_df["Age"] = patientDataDict_df["Date of birth"].apply(
+            self.calculate_age
+        )
+
+        # thais and nonthais
+        thais_df = patientDataDict_df.where(
+            patientDataDict_df["Nationality"] == "ไทย"
+        )
+
+        nonthais_df = patientDataDict_df.where(
+            patientDataDict_df["Nationality"] != "ไทย"
+        )
+
+        # visits df
+        patient_visit_df = pd.read_sql(
+            db.session.query(VisitModel.date)
+            .filter(
+                VisitModel.date.between(args["startDate"], args["endDate"])
+            )
+            .statement,
+            db.session.bind,
+        )
+
+        patient_visit_df["date"] = pd.to_datetime(
+            patient_visit_df["date"], errors="coerce"
+        )
+
+        # ix df
+        patient_ix_df = pd.read_sql(
+            db.session.query(InvestigationModel.date)
+            .filter(
+                InvestigationModel.date.between(
+                    args["startDate"], args["endDate"]
+                )
+            )
+            .statement,
+            db.session.bind,
+        )
+
+        patient_ix_df["date"] = pd.to_datetime(
+            patient_ix_df["date"], errors="coerce"
+        )
+
+        # count new patients
+        patient_count = self.getNumberOfNewPatientsStats(
+            patientDataDict_df, "Register date"
+        )
+
+        # count visits
+        visits_count = self.getNumberStats(
+            df=patient_visit_df,
+            db_column_name="date",
+            count_column_name="Visits",
+        )
+
+        # count ix
+        ix_count = self.getNumberStats(
+            df=patient_ix_df,
+            db_column_name="date",
+            count_column_name="Investigations",
+        )
+
+        # weekly new cases heatmap
+        weekly_new_cases_heatmap = self.getWeeklyHeatmap(
+            df=patientDataDict_df,
+            column_name=col_name,
+            count_column_name="New Cases",
+        )
+
+        # weekly visits heatmap
+        weekly_visits_heatmap = self.getWeeklyHeatmap(
+            df=patient_visit_df, column_name="date", count_column_name="Visits"
+        )
+
+        # count nationality
+        patient_nationality = self.getNationalityStats(patientDataDict_df)
+
+        # patient_age_sex_gender
+        patient_age_sex_gender = self.getAgeCrossedTable(
+            df=patientDataDict_df.loc[:, ["ID", "Age", "Sex", "Gender"]],
+            column_names=["Sex", "Gender"],
+        )
+
+        # Age/Nationality/Referral Status/Referred From
+        patient_age_nat_referral = self.getAgeCrossedTable(
+            df=patientDataDict_df.loc[
+                :,
+                [
+                    "ID",
+                    "Age",
+                    "Nationality",
+                    "Referral status",
+                    "Referred from",
+                ],
+            ],
+            column_names=["Nationality", "Referral status", "Referred from"],
+            no_data_as="N/A",
+        )
+
+        # Age/Nationality/Patient Status/Referred Out To
+        patient_age_nat_referral_out = self.getAgeCrossedTable(
+            df=patientDataDict_df.loc[
+                :,
+                [
+                    "ID",
+                    "Age",
+                    "Nationality",
+                    "Patient status",
+                    "Referred out to",
+                ],
+            ],
+            column_names=["Nationality", "Patient status", "Referred out to"],
+            no_data_as="N/A",
+        )
+
+        # Age/Sex/Gender/Risk Behaviors
+        patient_age_sex_gender_risk = self.getAgeCrossedTable(
+            df=patientDataDict_df.loc[
+                :, ["ID", "Age", "Sex", "Gender", "Risk behaviors"]
+            ],
+            column_names=["Sex", "Gender", "Risk behaviors"],
+        )
+
+        # Diagnosis before ARV initiation
+        patient_age_init_dx = self.grouppedTable(
+            df=patientDataDict_df.loc[
+                :, ["ID", "Diagnosis before ARV initiation"]
+            ],
+            column_names=["Diagnosis before ARV initiation"],
+            no_data_as="N/A",
+        )
+
+        # Current ARV Regimen
+        patient_current_arv = self.grouppedTable(
+            df=patientDataDict_df.loc[
+                :, ["ID", "Last ARV regimen"]
+            ],
+            column_names=["Last ARV regimen"],
+            no_data_as="N/A",
+        )
+
+        # initial cd4 by sex & gender
+        init_cd4_sex_gender = self.getCD4CrossedTable(
+            df=patientDataDict_df.loc[
+                :, ["ID", "First CD4 result", "Sex", "Gender"]
+            ],
+            cd4_column_name="First CD4 result",
+            column_names=["Sex", "Gender"],
+        )
+
+        # last cd4 by sex & gender
+        last_cd4_sex_gender = self.getCD4CrossedTable(
+            df=patientDataDict_df.loc[
+                :, ["ID", "Last CD4 result", "Sex", "Gender"]
+            ],
+            cd4_column_name="Last CD4 result",
+            column_names=["Sex", "Gender"],
+        )
+
+        # initial cd4 by sex & gender for Thais
+        init_cd4_sex_gender_thais = self.getCD4CrossedTable(
+            df=thais_df.loc[:, ["ID", "First CD4 result", "Sex", "Gender"]],
+            cd4_column_name="First CD4 result",
+            column_names=["Sex", "Gender"],
+        )
+
+        # last cd4 by sex & gender for Thais
+        last_cd4_sex_gender_thais = self.getCD4CrossedTable(
+            df=thais_df.loc[:, ["ID", "Last CD4 result", "Sex", "Gender"]],
+            cd4_column_name="Last CD4 result",
+            column_names=["Sex", "Gender"],
+        )
+
+        # initial cd4 by sex & gender for non-thais
+        init_cd4_sex_gender_nonthais = self.getCD4CrossedTable(
+            df=nonthais_df.loc[:, ["ID", "First CD4 result", "Sex", "Gender"]],
+            cd4_column_name="First CD4 result",
+            column_names=["Sex", "Gender"],
+        )
+
+        # last cd4 by sex & gender for non-thais
+        last_cd4_sex_gender_nonthais = self.getCD4CrossedTable(
+            df=nonthais_df.loc[:, ["ID", "Last CD4 result", "Sex", "Gender"]],
+            cd4_column_name="Last CD4 result",
+            column_names=["Sex", "Gender"],
+        )
+
+        # last VL
+        last_vl = self.getVLTable(
+            df=patientDataDict_df.loc[:, ["ID", "Last viral load result"]],
+            vl_column_name="Last viral load result",
+            column_names=[],
+        )
+
+        return {
+            "patientCount": patient_count.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "visitsCount": visits_count.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "ixCount": ix_count.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "newCasesHeatMap": weekly_new_cases_heatmap.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "visitHeatMap": weekly_visits_heatmap.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "patientNationality": patient_nationality.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "patientAgeSexGender": patient_age_sex_gender.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "patientAgeNatRefferIn": patient_age_nat_referral.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "patientAgeNatRefferOut": patient_age_nat_referral_out.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "patientAgeSexGenderRisk": patient_age_sex_gender_risk.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "patientAgeInitDx": patient_age_init_dx.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "patientCurrentARV": patient_current_arv.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "initCD4SexGender": init_cd4_sex_gender.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "lastCD4SexGender": last_cd4_sex_gender.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "initCD4SexGenderThais": init_cd4_sex_gender_thais.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "lastCD4SexGenderThais": last_cd4_sex_gender_thais.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "initCD4SexGenderNonThais": init_cd4_sex_gender_nonthais.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "lastCD4SexGenderNonThais": last_cd4_sex_gender_nonthais.to_html(
+                escape=True, bold_rows=False, border=0
+            ),
+            "lastVL": last_vl.to_html(escape=True, bold_rows=False, border=0),
+        }

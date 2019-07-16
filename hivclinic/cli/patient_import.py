@@ -33,7 +33,7 @@ ARV_MED_REGEX = [
     ["Rilpivirine", r"(?<!\(PEP\))Rilpivirine"],
     ["TDF300+FTC200", r"(?<!PrEP)\(TDF300\+FTC200\)"],
     ["TDF300+3TC300+EFV600", r"TDF300\+3TC300\+EFV600"],
-    ["Lamivir", r"LAMIVIR"],
+    ["Lamivudine", r"LAMIVIR"],
 ]
 
 OI_MED_REGEX = [

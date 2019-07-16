@@ -1,15 +1,11 @@
 import re
 
+from bs4 import BeautifulSoup
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.wait import WebDriverWait
-
-from bs4 import BeautifulSoup
-
-EXPLICIT_WAIT = 10
 
 LABS_REGEX = [
     ["viralLoad", r"(?:VL|Viral.*):::(<\s*\d+|\d+)"],
@@ -38,7 +34,7 @@ LABS_REGEX = [
     ["phosphate", r"(?:Phosphate.+):::(\d+.\d+|\d+)"],
     ["antiHIV", r"(?:Anti-HIV.+):::(\w+)"],
     ["HBsAg", r"(?:HBs-Ag.+):::(\w+)"],
-    ["antiHBs", r"(?:Anti-HBs.+):::(Negative|Positive)"],
+    ["antiHBs", r"(?:Anti-HBs):::(\w+)"],
     ["antiHCV", r"(?:Anti-HCV):::(\w+)"],
     ["tpha", r"(?:TPHA.+):::(\w+)"],
     ["rpr", r"(?:Syphilis Ab\(RPR\).+):::1:(\d+)"],
@@ -51,24 +47,11 @@ LABS_REGEX = [
 ]
 
 
-def waitForLoad(
-    driver, timeout_sec: int = EXPLICIT_WAIT, wait_for_dom: bool = False
-):
-    if wait_for_dom:
-        WebDriverWait(driver, timeout_sec).until(
-            lambda d: (
-                driver.execute_script("return document.readyState")
-                == "complete"
-            )
-        )
-
-    try:
-        WebDriverWait(driver, timeout_sec).until(
-            EC.invisibility_of_element_located((By.ID, "AWMID"))
-        )
-
-    except Exception:
-        pass
+def waitForPageReady(wait):
+    loading_css = "#AWMOD"
+    wait.until(
+        EC.invisibility_of_element_located((By.CSS_SELECTOR, loading_css))
+    )
 
 
 def convertToDate(date_str: str):
@@ -81,56 +64,83 @@ def convertToDate(date_str: str):
     return f"{date_str[0]}/{date_str[1]}/{date_str[2]}"
 
 
-def searchHN(driver, text_box_id: str, hn: str):
+def readHN(page_source):
+    hn_span_css = "span[name=t_hndsp_0]"
+    soup = BeautifulSoup(page_source, "lxml")
+
+    try:
+        hn = soup.select_one(hn_span_css).text
+
+    except Exception:
+        hn = None
+
+    return hn
+
+
+def waitForHNToLoaded(wait, hn):
+    wait.until(lambda d: (readHN(d.page_source) == hn))
+
+
+def searchHN(wait, text_box_css: str, hn: str):
     """Enter and search HN for right upper text input"""
     # search for the HN
-
-    search_box = WebDriverWait(driver, EXPLICIT_WAIT).until(
-        EC.element_to_be_clickable((By.ID, text_box_id))
+    search_box = wait.until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, text_box_css))
     )
+
     search_box.send_keys(Keys.CONTROL, "a", Keys.ENTER)
     search_box.send_keys(hn)
     search_box.send_keys(Keys.TAB)
 
 
-def isNextPageLinkExists(driver):
+def isNextPageLinkExists(driver, wait):
     next_page_link_css = "td > a[href*='PageNext']"
 
     soup = BeautifulSoup(driver.page_source, "lxml")
     is_next_page_link = bool(soup.select_one(next_page_link_css))
 
     if is_next_page_link:
-        return WebDriverWait(driver, EXPLICIT_WAIT).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, next_page_link_css))
+        return wait.until(
+            EC.presence_of_element_located(
+                (By.CSS_SELECTOR, next_page_link_css)
+            )
         )
 
     else:
         return False
 
 
-def clickNew(driver):
-    new_button_xpath = (
-        '//img[contains(@src, "new_disa_32x32.gif") '
-        'or contains(@src, "new_enab_32x32.gif")]'
-    )
+def isDisplayPatientInfo(driver, wait):
+    hn_css = "span[name='t_hndsp_0']"
 
-    new_patient = WebDriverWait(driver, EXPLICIT_WAIT).until(
-        EC.element_to_be_clickable((By.XPATH, new_button_xpath))
+    soup = BeautifulSoup(driver.page_source, "lxml")
+    return bool(soup.select_one(hn_css))
+
+
+def clickNew(wait, click_new_button=True):
+    if click_new_button:
+        new_button_css = (
+            "img[src$='new_disa_32x32.gif'], " "img[src$='new_enab_32x32.gif']"
+        )
+
+    else:
+        new_button_css = "img[src$='exit_enab_32x32.gif']"
+
+    new_patient = wait.until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, new_button_css))
     )
     new_patient.click()
 
 
-def setInputDate(driver, input_id: str, date_str: str):
-    date_input = WebDriverWait(driver, EXPLICIT_WAIT).until(
-        EC.element_to_be_clickable((By.ID, input_id))
-    )
+def setInputDate(wait, input_id: str, date_str: str):
+    date_input = wait.until(EC.presence_of_element_located((By.ID, input_id)))
 
     # I don't know but this keys combination works
     date_input.send_keys(Keys.CONTROL, "a", Keys.ENTER)
     date_input.send_keys(date_str, Keys.ENTER)
 
     # wait for the form to update
-    date_input = WebDriverWait(driver, EXPLICIT_WAIT).until(
+    date_input = wait.until(
         EC.text_to_be_present_in_element_value((By.ID, input_id), date_str)
     )
 
@@ -147,52 +157,77 @@ def praseVisits(page_source):
         for element in visit_dates
     ]
 
-    return visit_dates
+    primary_care = soup.find("input", id="objdw_cnifcn_ext_ovst_0_28")
+    secondary_care = soup.find("input", id="objdw_cnifcn_ext_ovst_0_27")
+    regular_care = soup.find("input", id="objdw_cnifcn_ext_ovst_0_29")
+
+    cares = f"{primary_care}/{secondary_care}/{regular_care}"
+
+    return visit_dates, cares
 
 
 def praseTwoTablePage(
     driver,
-    date_element_xpath: str,
+    wait,
+    date_element_css: str,
     element_text_split_by: str,
     elementsPraser: object,
 ) -> list:
     results = []
-
-    # wait
-    waitForLoad(driver)
-
-    elements = driver.find_elements_by_xpath(date_element_xpath)
     is_first_element = True
 
-    for element in elements:
-        current_page_source = driver.page_source
+    while True:
+        elements = driver.find_elements_by_css_selector(date_element_css)
 
-        date_str = element.text.split(element_text_split_by)[0]
-        date_str = convertToDate(date_str)
+        for element in elements:
+            # read subelements
+            first_page_source = driver.page_source
+            first_HCIS_results = elementsPraser(page_source=first_page_source)
 
-        # scrolls items into view
-        driver.execute_script("return arguments[0].scrollIntoView();", element)
+            # read dates
+            date_str = element.text.split(element_text_split_by)[0]
+            date_str = convertToDate(date_str)
 
-        actions = ActionChains(driver)
-        actions.move_to_element(element).perform()
-        actions.double_click(element).perform()
-
-        # wait
-        waitForLoad(driver)
-
-        if not is_first_element:
-            WebDriverWait(driver, EXPLICIT_WAIT).until(
-                lambda d: (
-                    driver.page_source != current_page_source
-                )
+            # scrolls items into view
+            driver.execute_script(
+                "return arguments[0].scrollIntoView();", element
             )
 
-        else:
-            is_first_element = False
+            actions = ActionChains(driver)
+            actions.move_to_element(element).perform()
+            actions.double_click(element).perform()
 
-        # get list of subelements
-        subelement_result = elementsPraser(page_source=driver.page_source)
-        results.append([date_str, subelement_result])
+            # wait
+            waitForPageReady(wait=wait)
+
+            if not is_first_element:
+                wait.until(
+                    lambda d: (driver.page_source != first_page_source)
+                    and (
+                        first_HCIS_results[0]
+                        != elementsPraser(page_source=driver.page_source)[0]
+                    )
+                )
+
+                results.append(
+                    [
+                        date_str,
+                        elementsPraser(page_source=driver.page_source)[1],
+                    ]
+                )
+
+            else:
+                is_first_element = False
+                results.append([date_str, first_HCIS_results[1]])
+
+        # if there is a next page
+        next_page = isNextPageLinkExists(driver, wait)
+
+        if next_page:
+            next_page.click()
+
+        else:
+            break
 
     return results
 
@@ -205,7 +240,18 @@ def praseMedication(page_source) -> list:
         "span", attrs={"name": re.compile(read_from_name_regex)}
     )
 
-    return [med.text for med in medications]
+    # get unique class from first result
+    if medications:
+        hcis_class = medications[0]["class"]
+
+    else:
+        hcis_class = None
+
+    # sort result for later comparision
+    medications = [med.text for med in medications]
+    medications.sort()
+
+    return hcis_class, medications
 
 
 def praseInvestigation(page_source) -> str:
@@ -222,10 +268,20 @@ def praseInvestigation(page_source) -> str:
         "input", attrs={"name": re.compile(ix_result_regex)}
     )
 
+    # get unique class from first result
+    if lab_names:
+        hcis_class = lab_names[0]["class"]
+
+    else:
+        hcis_class = None
+
     lab_names = [name.get("value") for name in lab_names]
     lab_results = [result.get("value") for result in lab_results]
 
     labs = list(zip(lab_names, lab_results))
+
+    # sort result for later comparision
+    labs = sorted(labs, key=lambda lab: lab[0])
 
     for lab in labs:
         if not lab_string:
@@ -234,7 +290,7 @@ def praseInvestigation(page_source) -> str:
         else:
             lab_string = lab_string + "{}:::{}\n".format(lab[0], lab[1])
 
-    return lab_string
+    return hcis_class, lab_string
 
 
 def praseHN(page_source):
@@ -255,10 +311,10 @@ def matchLabs(allLabs: list):
         lab["date"] = date
 
         for regex_str in LABS_REGEX:
-            match = re.search(regex_str[1], rawLab[1])
+            matches = re.findall(regex_str[1], rawLab[1])
 
-            if match:
-                lab[regex_str[0]] = match.group(1)
+            if matches:
+                lab[regex_str[0]] = matches[0]
 
         labs.append(lab)
 
@@ -340,35 +396,11 @@ def praseDermographic(page_source, hn):
 
 def praseDermographicTab2(page_source):
     soup = BeautifulSoup(page_source, "lxml")
-    # address = ""
     phoneNumbers = []
 
-    # # address
-    # st_number = (
-    #     soup.find("input", {"id": "objdw_ex_addr_0_4"}).get("value") or ""
-    # )
-    # moo = soup.find("input", {"id": "objdw_ex_addr_0_5"}).get("value") or ""
-    # soi = soup.find("input", {"id": "objdw_ex_addr_0_6"}).get("value") or ""
-    # st = soup.find("input", {"id": "objdw_ex_addr_0_7"}).get("value") or ""
-    # province = (
-    #     soup.find("input", {"id": "objdw_ex_addr_0_9"}).get("value") or ""
-    # )
-    # country = (
-    #     soup.find("input", {"id": "objdw_ex_addr_0_16"}).get("value") or ""
-    # )
-    # zip_code = (
-    #     soup.find("input", {"id": "objdw_ex_addr_0_13"}).get("value") or ""
-    # )
-
-    # address = (
-    #     f"{'เลขที่/อาคาร '*bool(st_number)}{st_number}{' '*bool(st_number)}"
-    #     f"{'หมู่ที่ '*bool(moo)}{moo}{' '*bool(moo)}"
-    #     f"{'ตรอก/ซอย'*bool(soi)}{soi}{' '*bool(soi)}"
-    #     f"{'ถนน'*bool(st)}{st}{' '*bool(st)}"
-    #     f"{province}{' '*bool(province)}"
-    #     f"{'ประเทศ'*bool(country)}{country}{' '*bool(country)}"
-    #     f"{zip_code}"
-    # )
+    address = (
+        soup.find("input", {"id": "objdw_ex_addr_0_9"}).get("value") or ""
+    )
 
     # phones
     phone_base_id = "objdw_ex_addr_0_"
@@ -379,7 +411,7 @@ def praseDermographicTab2(page_source):
         if phone:
             phoneNumbers.append(phone)
 
-    return {"phoneNumbers": phoneNumbers}
+    return {"phoneNumbers": phoneNumbers, "address": address}
 
 
 def isElementPresent(driver, by, value):

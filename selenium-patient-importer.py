@@ -1,5 +1,3 @@
-import atexit
-import glob
 import json
 import logging
 import multiprocessing
@@ -25,6 +23,10 @@ from hivclinic.helpers.patient_importer.hcis_importer import HCISImporter
 basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, ".env"))
 
+# Multiprocessing config
+ITERATION_COUNT = multiprocessing.cpu_count()
+
+# Selenium config
 MAX_RETRIES = os.getenv("SELENIUM_MAX_RETRIES")
 
 SELENIUM_SERVER_URI = os.getenv("SELENIUM_SERVER_URI")
@@ -36,6 +38,11 @@ HCIS_SID = os.getenv("HCIS_SID")
 NHSO_USERNAME = os.getenv("NHSO_USERNAME")
 NHSO_PASSWORD = os.getenv("NHSO_PASSWORD")
 
+# File paths
+HN_LIST_FILE = "./hn_list.json"
+IMPORTED_HN_FILE = "./imported_hn.json"
+IMPORTED_INFORMATION = "./patient_details.json"
+
 logger = logging.getLogger(__name__)
 out_hdlr = logging.StreamHandler(sys.stdout)
 out_hdlr.setLevel(logging.DEBUG)
@@ -43,77 +50,118 @@ logger.addHandler(out_hdlr)
 logger.setLevel(logging.DEBUG)
 
 
-def load_hn_list():
-    patient_list_file = Path("./patient_list.json")
+def start_workers():
+    manager = multiprocessing.Manager()
+    queue = manager.Queue()
+    result_list = manager.list()
+    hn_imported = manager.list()
+    result_lock = manager.Lock()
 
-    if not patient_list_file.is_file():
-        retries_count = 1
-        while retries_count <= MAX_RETRIES:
-            try:
-                retries_count = retries_count + 1
+    pool = multiprocessing.Pool(processes=ITERATION_COUNT)
 
-                hcis = HCISImporter(
-                    seleniumServerURI=SELENIUM_SERVER_URI,
-                    hcis_server=HCIS_SERVER,
-                    hcis_username=HCIS_USERNAME,
-                    hcis_password=HCIS_PASSWORD,
-                    hcis_sid=HCIS_SID,
-                )
+    # get hn list
+    with open(HN_LIST_FILE, "r") as file:
+        try:
+            hn_list = json.load(file)
 
-                patient_list = hcis.getPatientList()
+        except Exception:
+            hn_list = []
 
-                with open(patient_list_file, "w") as file:
-                    json.dump(patient_list, file)
+    if not hn_list:
+        hn_list = hn_list_scraper()
 
-                break
+    # get imported hn
+    with open(IMPORTED_HN_FILE, "r") as file:
+        try:
+            imported_hn_list = json.load(file)
 
-            except Exception:
-                traceback.print_exc()
+        except Exception:
+            imported_hn_list = []
 
-                if retries_count > MAX_RETRIES:
-                    logger.error("Unable to get HNs, exiting.")
+    hn_list = list(set(hn_list) - set(imported_hn_list))
 
-                    break
+    # prepare queue
+    for hn in hn_list:
+        queue.put(hn)
 
-            finally:
-                try:
-                    hcis.quit()
+    # add list of imported hn
+    for hn in imported_hn_list:
+        hn_imported.append(hn)
 
-                except WebDriverException:
-                    traceback.print_exc()
-                    logger.error("Lost connection with IE Webdriver.")
+    # add imported information into the list
+    with open(IMPORTED_INFORMATION, "r") as file:
+        try:
+            imported_patients = json.load(file)
+
+        except Exception:
+            imported_patients = []
+
+    for imported_patient in imported_patients:
+        result_list.append(imported_patient)
+
+    # start workers
+    try:
+        for worker_id in range(ITERATION_COUNT):
+            pool.apply_async(
+                selenium_task,
+                args=(worker_id, queue, hn_imported, result_list, result_lock),
+            )
+
+    except KeyboardInterrupt:
+        logger.warning("[Main] Caught KeyboardInterrupt, terminating workers")
+        pool.terminate()
+        pool.join()
 
     else:
-        with open(patient_list_file, "r") as file:
-            patient_list = json.load(file)
+        logger.info("[Main] Task finished, terminating")
+        pool.close()
+        pool.join()
 
-    return patient_list
 
+def hn_list_scraper():
+    logger.info("[Main] Scraping HN list.")
 
-def selenium_task(worker_id, hn_list):
-    """Worker code"""
-    patient_information_file = Path(f"./patient_info_{worker_id}.json")
-    hn_imported_file = Path(f"./imported_hn_{worker_id}.json")
-    patient_failed_file = Path(f"./patient_failed_{worker_id}.json")
+    retries_count = 1
 
-    # create file if not exists
-    patient_information_file.touch()
-    hn_imported_file.touch()
-    patient_failed_file.touch()
-
-    with open(hn_imported_file, "r") as file:
+    while retries_count <= MAX_RETRIES:
         try:
-            hn_imported = json.load(file)
-        except ValueError:
-            hn_imported = []
+            retries_count = retries_count + 1
 
-    with open(patient_information_file, "r") as file:
-        try:
-            patient_information = json.load(file)
-        except ValueError:
-            patient_information = []
+            hcis = HCISImporter(
+                seleniumServerURI=SELENIUM_SERVER_URI,
+                hcis_server=HCIS_SERVER,
+                hcis_username=HCIS_USERNAME,
+                hcis_password=HCIS_PASSWORD,
+                hcis_sid=HCIS_SID,
+            )
 
-    hn_failed = []
+            hn_list = hcis.getPatientList()
+
+            with open(HN_LIST_FILE, "w") as file:
+                json.dump(hn_list, file)
+
+            break
+
+        except Exception:
+            traceback.print_exc()
+
+            if retries_count > MAX_RETRIES:
+                logger.error("Unable to get HNs, exiting.")
+                quit()
+
+        finally:
+            try:
+                hcis.quit()
+
+            except WebDriverException:
+                traceback.print_exc()
+                logger.error("Lost connection with IE Webdriver.")
+
+    return hn_list
+
+
+def selenium_task(worker_id, queue, hn_imported, result_list, result_lock):
+    logger.info(f"[{worker_id}] Starting...")
 
     hcis = HCISImporter(
         seleniumServerURI=SELENIUM_SERVER_URI,
@@ -123,62 +171,80 @@ def selenium_task(worker_id, hn_list):
         hcis_sid=HCIS_SID,
     )
 
-    for hn in hn_list:
-        if hn in hn_imported:
-            continue
+    while not queue.empty():
+        current_hn = queue.get()
 
-        remaining = len(hn_list) - len(hn_imported) - len(hn_failed)
-
-        logger.info(
-            f"[{worker_id}] "
-            f"Current progress -- Imported: {len(hn_imported)}"
-            f", Failed: {len(hn_failed)}, "
-            f"Remaining: {remaining}"
-        )
-        logger.info(
-            f"[{worker_id}] " "Importing patient HN {} from HCIS.".format(hn)
-        )
-        retries_count = 0
-
-        patient_detail = {
+        patient_details = {
             "visits": None,
             "ix": None,
             "med": None,
             "dermographic": None,
         }
+        retries_count = 1
+
+        with result_lock:
+            logger.info(
+                f"[{worker_id}] Importing HN {current_hn} "
+                f"(Done {len(list(hn_imported))} - "
+                f"Remaining {queue.qsize()})"
+            )
 
         while retries_count <= MAX_RETRIES:
+            retries_count = retries_count + 1
+
             try:
-                retries_count = retries_count + 1
+                if patient_details["ix"] is None:
+                    logger.info(
+                        f"[{worker_id}] Importing investigations of "
+                        f"HN {current_hn} from HCIS."
+                    )
+                    patient_details["ix"] = hcis.getInvestigations(current_hn)
 
-                if patient_detail["visits"] is None:
-                    patient_detail["visits"] = hcis.getVisits(hn)
+                if patient_details["med"] is None:
+                    logger.info(
+                        f"[{worker_id}] Importing medications of "
+                        f"HN {current_hn} from HCIS."
+                    )
+                    patient_details["med"] = hcis.getMedications(current_hn)
 
-                if patient_detail["ix"] is None:
-                    patient_detail["ix"] = hcis.getInvestigations(hn)
-
-                if patient_detail["med"] is None:
-                    patient_detail["med"] = hcis.getMedications(hn)
-
-                if patient_detail["dermographic"] is None:
-                    patient_detail["dermographic"] = hcis.getDermographic(
-                        hn=hn,
+                if patient_details["dermographic"] is None:
+                    logger.info(
+                        f"[{worker_id}] Importing dermographics of "
+                        f"HN {current_hn} from HCIS."
+                    )
+                    patient_details["dermographic"] = hcis.getDermographic(
+                        hn=current_hn,
                         nhso_username=NHSO_USERNAME,
                         nhso_password=NHSO_PASSWORD,
                     )
 
+                if patient_details["visits"] is None:
+                    logger.info(
+                        f"[{worker_id}] Importing visits of HN "
+                        f"{current_hn} from HCIS."
+                    )
+                    cares, patient_details["visits"] = hcis.getVisits(
+                        current_hn
+                    )
+
+                    # add hospitals names in dermographics
+                    patient_details["dermographic"]["cares"] = cares
+
                 logger.info(
-                    f"[{worker_id}] "
-                    "Done importing patient HN {} from HCIS.".format(hn)
+                    f"[{worker_id}] Done importing patient HN "
+                    f"{current_hn} from HCIS."
                 )
-                patient_information.append(patient_detail)
-                hn_imported.append(hn)
 
-                with open(patient_information_file, "w") as file:
-                    json.dump(patient_information, file, default=str)
+                with result_lock:
+                    hn_imported.append(current_hn)
+                    result_list.append(patient_details)
 
-                with open(hn_imported_file, "w") as file:
-                    json.dump(hn_imported, file, default=str)
+                    # write results to file
+                    with open(IMPORTED_HN_FILE, "w") as file:
+                        json.dump(list(hn_imported), file)
+
+                    with open(IMPORTED_INFORMATION, "w") as file:
+                        json.dump(list(result_list), file)
 
                 break
 
@@ -195,7 +261,7 @@ def selenium_task(worker_id, hn_list):
                 )
                 traceback.print_exc()
 
-            except WebDriverException:
+            except Exception:
                 logger.error(
                     f"[{worker_id}] Error detected,"
                     " see the traceback below."
@@ -225,42 +291,15 @@ def selenium_task(worker_id, hn_list):
 
                 logger.info(f"[{worker_id}] Recovered from error.")
 
-            except KeyboardInterrupt:
-                logger.warn(
-                    f"[{worker_id}] KeyboardInterrupt "
-                    "detected, terminating."
-                )
-                traceback.print_exc()
-
-                try:
-                    hcis.quit()
-
-                except WebDriverException:
-                    traceback.print_exc()
-                    logger.error("Lost connection with IE Webdriver.")
-
-                finally:
-                    quit()
-
-            except Exception:
-                logger.error(
-                    f"[{worker_id}] Unexpected error detected,"
-                    " see the traceback below."
-                )
-                traceback.print_exc()
-
             finally:
                 if retries_count > MAX_RETRIES:
                     logger.error(
-                        f"[{worker_id}] "
-                        "Unable to get information for {}, skipping.".format(
-                            hn
-                        )
+                        f"[{worker_id}] Unable to get information "
+                        f"for HN {current_hn}, putting the HN "
+                        "at the end of the queue."
                     )
-                    hn_failed.append(hn)
 
-                    with open(patient_failed_file, "w") as file:
-                        json.dump(hn_failed, file, default=str)
+                    queue.put(current_hn)
 
                     break
 
@@ -273,51 +312,17 @@ def selenium_task(worker_id, hn_list):
     return True
 
 
-def exit_handler(pool):
-    pool.close()
-    pool.terminate()
-    pool.join()
-    quit()
+def create_files():
+    hn_list_file = Path(HN_LIST_FILE)
+    hn_list_file.touch()
+
+    imported_hn_file = Path(IMPORTED_HN_FILE)
+    imported_hn_file.touch()
+
+    imported_information_file = Path(IMPORTED_INFORMATION)
+    imported_information_file.touch()
 
 
 if __name__ == "__main__":
-    HNs = load_hn_list()
-
-    ITERATION_COUNT = multiprocessing.cpu_count()
-    count_per_iteration = len(HNs) / float(ITERATION_COUNT)
-
-    pool = multiprocessing.Pool(processes=ITERATION_COUNT)
-
-    # register exit handler
-    atexit.register(exit_handler, pool=pool)
-
-    for i in range(0, ITERATION_COUNT):
-        list_start = int(count_per_iteration * i)
-        list_end = int(count_per_iteration * (i + 1))
-        worker_data_list = HNs[list_start:list_end]
-
-        logger.info(
-            f"Starting worker id {i} with data list"
-            f" of size {len(worker_data_list)} entries."
-        )
-
-        pool.apply_async(selenium_task, args=(i, worker_data_list))
-
-    pool.close()
-    pool.join()
-
-    imported_files = glob.glob("patient_info_*")
-    all_patient_info = []
-
-    for imported_file in imported_files:
-        with open(imported_file) as file:
-            try:
-                all_patient_info = all_patient_info + json.load(file)
-            except ValueError:
-                pass
-
-    all_patient_information_file = Path(f"./all_patient_info.json")
-    all_patient_information_file.touch()
-
-    with open(all_patient_information_file, "w") as file:
-        json.dump(list(all_patient_info), file)
+    create_files()
+    start_workers()

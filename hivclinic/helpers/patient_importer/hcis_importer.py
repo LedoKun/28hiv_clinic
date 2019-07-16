@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
@@ -6,13 +7,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.support.wait import WebDriverWait
 
-from bs4 import BeautifulSoup
-
+from .hcis_helpers import encodeStr  # isElementPresent,; convertToDate,
 from .hcis_helpers import (
     clickNew,
-    encodeStr,  # convertToDate,
-    isElementPresent,
     isNextPageLinkExists,
+    isDisplayPatientInfo,
     matchLabs,
     praseDermographic,
     praseDermographicTab2,
@@ -23,14 +22,15 @@ from .hcis_helpers import (
     praseVisits,
     searchHN,
     setInputDate,
-    waitForLoad,
+    waitForPageReady,
+    waitForHNToLoaded,
 )
 from .importer import Importer
 
 CLINIC_NAME = "วัณโรค"
 CLINIC_ID = "111"
 
-EXPLICIT_WAIT = 10
+EXPLICIT_WAIT = 15
 
 
 class HCISImporter(Importer):
@@ -50,14 +50,7 @@ class HCISImporter(Importer):
 
         # IE DesiredCapabilities
         caps = DesiredCapabilities.INTERNETEXPLORER
-        # caps['ignoreProtectedModeSettings'] = True
         caps["nativeEvents"] = False
-        # caps['requireWindowFocus'] = True
-        # caps['INTRODUCE_FLAKINESS_BY_IGNORING_SECURITY_DOMAINS'] = True
-        # caps["se:ieOptions"] = {}
-        # caps["se:ieOptions"]["ie.forceCreateProcessApi"] = True
-        # caps["se:ieOptions"]["ie.browserCommandLineSwitches"] = "-private"
-        # caps["se:ieOptions"]["ie.ensureCleanSession"] = True
 
         self.driver = webdriver.Remote(
             command_executor=seleniumServerURI,
@@ -75,6 +68,7 @@ class HCISImporter(Importer):
         self.client_name = hcis_client_name
         self.client_ip = hcis_client_ip
         self.client_mac = hcis_client_mac
+        self.wait = WebDriverWait(self.driver, EXPLICIT_WAIT)
 
     def getDermographic(self, hn: str, nhso_username, nhso_password) -> dict:
         url = (
@@ -91,79 +85,59 @@ class HCISImporter(Importer):
         self.driver.get(url)
 
         # wait
-        waitForLoad(self.driver, wait_for_dom=True)
+        waitForPageReady(wait=self.wait)
+        old_source = self.driver.page_source
 
-        # get current hn
-        soup = BeautifulSoup(self.driver.page_source, "lxml")
-        current_hn = soup.find("span", {"id": "objdw_lupt_0_0"})
+        while isDisplayPatientInfo(driver=self.driver, wait=self.wait):
+            clickNew(self.wait, False)
 
-        if current_hn:
-            # new patient
-            new_patient_button_css = "img[src*='exit_enab_32x32.gif']"
-            new_patient_button = WebDriverWait(
-                self.driver, EXPLICIT_WAIT
-            ).until(
-                EC.element_to_be_clickable(
-                    (By.CSS_SELECTOR, new_patient_button_css)
+            # wait
+            self.wait.until(
+                (
+                    lambda d: d.execute_script("return document.readyState")
+                    == "complete"
+                    and (d.page_source != old_source)
                 )
             )
-            new_patient_button.click()
-
-            # wait
-            waitForLoad(self.driver)
-
-        # checkbox search by hn
-        hn_checkbox = WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-            EC.element_to_be_clickable((By.ID, "objdw_head_0_2"))
-        )
-        hn_checkbox.click()
-
-        # wait
-        waitForLoad(self.driver)
 
         # search for the patient
-        text_box_id = "objdw_head_0_4"
-        searchHN(driver=self.driver, text_box_id=text_box_id, hn=hn)
+        text_box_css = "#objdw_head_0_4"
+        searchHN(wait=self.wait, text_box_css=text_box_css, hn=hn)
 
         # wait
-        waitForLoad(self.driver)
+        waitForPageReady(wait=self.wait)
 
         # load patient details
-        details_botton_name = "b_1_0"
-        if isElementPresent(
-            driver=self.driver, by="name", value=details_botton_name
-        ):
-            details_botton = WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-                EC.element_to_be_clickable((By.NAME, details_botton_name))
-            )
-            details_botton.click()
-
-            # wait
-            waitForLoad(self.driver)
+        details_botton_css = "input[name='b_1_0']"
+        details_botton = self.wait.until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, details_botton_css))
+        )
+        details_botton.click()
 
         # wait
-        WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-            EC.visibility_of_element_located((By.NAME, "t_privilegedsp_0"))
-        )
+        waitForHNToLoaded(self.wait, hn)
 
         dermographic = praseDermographic(
             page_source=self.driver.page_source, hn=hn
         )
 
         # go to second tab
-        tab_id = "WW_1_C_tab_1_1"
-        tab = WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-            EC.element_to_be_clickable((By.ID, tab_id))
+        tab_css_selector = "div[id$=_C_tab_1_1]"
+        tab = self.wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, tab_css_selector))
         )
         tab.click()
 
         # wait
-        waitForLoad(self.driver)
+        self.wait.until(
+            EC.presence_of_element_located((By.ID, "objdw_ex_addr_0_0"))
+        )
 
         dermographicTab2 = praseDermographicTab2(
             page_source=self.driver.page_source
         )
 
+        dermographic["address"] = dermographicTab2["address"]
         dermographic["phoneNumbers"] = dermographicTab2["phoneNumbers"]
 
         # extract info
@@ -182,40 +156,56 @@ class HCISImporter(Importer):
         self.driver.get(url)
 
         # wait
-        waitForLoad(self.driver, wait_for_dom=True)
+        waitForPageReady(wait=self.wait)
+        old_source = self.driver.page_source
 
-        clickNew(self.driver)
-
-        # wait
-        waitForLoad(self.driver)
-
-        if hn not in self.driver.page_source:
-            # search for the patient
-            searchHN(driver=self.driver, text_box_id="objdw_lupt_0_2", hn=hn)
+        while isDisplayPatientInfo(driver=self.driver, wait=self.wait):
+            clickNew(self.wait)
 
             # wait
-            WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-                EC.visibility_of_element_located((By.NAME, "t_privilegedsp_0"))
+            self.wait.until(
+                (
+                    lambda d: d.execute_script("return document.readyState")
+                    == "complete"
+                    and (d.page_source != old_source)
+                )
             )
 
+        # search for the patient
+        searchHN(wait=self.wait, text_box_css="#objdw_lupt_0_2", hn=hn)
+
+        # wait
+        waitForHNToLoaded(self.wait, hn)
+
         # prase visits
-        visits = praseVisits(self.driver.page_source)
+        cares, visits = praseVisits(self.driver.page_source)
 
         while True:
-            link = isNextPageLinkExists(driver=self.driver)
+            link = isNextPageLinkExists(driver=self.driver, wait=self.wait)
+            old_source = self.driver.page_source
 
             if link:
                 link.click()
 
                 # wait
-                waitForLoad(self.driver)
+                self.wait.until(
+                    (
+                        lambda d: d.execute_script(
+                            "return document.readyState"
+                        )
+                        == "complete"
+                        and (d.page_source != old_source)
+                    )
+                )
 
-                visits = visits + praseVisits(self.driver.page_source)
+                _, new_page_visits = praseVisits(self.driver.page_source)
+
+                visits = visits + new_page_visits
 
             else:
                 break
 
-        return visits
+        return cares, visits
 
     def getMedications(self, hn: str) -> list:
         url = (
@@ -230,49 +220,65 @@ class HCISImporter(Importer):
         self.driver.get(url)
 
         # wait
-        waitForLoad(self.driver, wait_for_dom=True)
+        waitForPageReady(wait=self.wait)
+        old_source = self.driver.page_source
 
-        clickNew(self.driver)
-
-        # wait
-        waitForLoad(self.driver)
-
-        if hn not in self.driver.page_source:
-            # search for the patient
-            text_box_id = "objdw_lupt_0_2"
-            searchHN(driver=self.driver, text_box_id=text_box_id, hn=hn)
+        while isDisplayPatientInfo(driver=self.driver, wait=self.wait):
+            clickNew(self.wait)
 
             # wait
-            WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-                EC.visibility_of_element_located((By.NAME, "t_privilegedsp_0"))
+            self.wait.until(
+                (
+                    lambda d: d.execute_script("return document.readyState")
+                    == "complete"
+                    and (d.page_source != old_source)
+                )
             )
+
+        # search for the patient
+        text_box_css = "#objdw_lupt_0_2"
+        searchHN(wait=self.wait, text_box_css=text_box_css, hn=hn)
+
+        # wait
+        waitForHNToLoaded(self.wait, hn)
 
         # set start date
         med_start_date = "01/01/2500"
         med_start_date_input_id = "objdw_search_0_6"
 
         setInputDate(
-            driver=self.driver,
+            wait=self.wait,
             input_id=med_start_date_input_id,
             date_str=med_start_date,
         )
 
         # click search
-        search_button = WebDriverWait(self.driver, EXPLICIT_WAIT).until(
+        search_button = self.wait.until(
             EC.element_to_be_clickable((By.ID, "WW_0_C_cb_1"))
         )
+        old_source = self.driver.page_source
         search_button.click()
 
         # get medication list
-        date_element_xpath = "//span[starts-with(@name, 'compute_2_')]"
+        date_element_css = "span[name^='compute_2_']"
         element_text_split_by = " "
         fnc = praseMedication
 
         # wait
-        waitForLoad(self.driver, wait_for_dom=True)
+        self.wait.until(
+            (
+                lambda d: d.execute_script("return document.readyState")
+                == "complete"
+                and (d.page_source != old_source)
+            )
+        )
 
         results = praseTwoTablePage(
-            self.driver, date_element_xpath, element_text_split_by, fnc
+            driver=self.driver,
+            wait=self.wait,
+            date_element_css=date_element_css,
+            element_text_split_by=element_text_split_by,
+            elementsPraser=fnc,
         )
 
         return results
@@ -290,31 +296,39 @@ class HCISImporter(Importer):
         self.driver.get(url)
 
         # wait
-        waitForLoad(self.driver, wait_for_dom=True)
+        waitForPageReady(wait=self.wait)
+        old_source = self.driver.page_source
 
-        clickNew(self.driver)
-
-        # wait
-        waitForLoad(self.driver)
-
-        # search for the patient
-        if hn not in self.driver.page_source:
-            text_box_id = "objdw_lupt_0_2"
-            searchHN(driver=self.driver, text_box_id=text_box_id, hn=hn)
+        while isDisplayPatientInfo(driver=self.driver, wait=self.wait):
+            clickNew(self.wait)
 
             # wait
-            waitForLoad(self.driver)
+            self.wait.until(
+                (
+                    lambda d: d.execute_script("return document.readyState")
+                    == "complete"
+                    and (d.page_source != old_source)
+                )
+            )
 
-        # wait
-        waitForLoad(self.driver)
+        # search for the patient
+        text_box_css = "#objdw_lupt_0_2"
+        searchHN(wait=self.wait, text_box_css=text_box_css, hn=hn)
 
         # get lab list
-        date_element_xpath = "//span[starts-with(@name, 'compute_1_')]"
+        date_element_css = "span[name^='compute_1_']"
         element_text_split_by = "::"
         fnc = praseInvestigation
 
+        # wait again
+        waitForHNToLoaded(self.wait, hn)
+
         results = praseTwoTablePage(
-            self.driver, date_element_xpath, element_text_split_by, fnc
+            driver=self.driver,
+            wait=self.wait,
+            date_element_css=date_element_css,
+            element_text_split_by=element_text_split_by,
+            elementsPraser=fnc,
         )
 
         prasedLabs = matchLabs(results)
@@ -334,93 +348,69 @@ class HCISImporter(Importer):
         self.driver.get(url)
 
         # wait
-        waitForLoad(self.driver, wait_for_dom=True)
+        waitForPageReady(wait=self.wait)
 
-        clickNew(self.driver)
+        while True:
+            clickNew(self.wait)
 
-        clicnic_select_id = "objdw_ext_cnq_0_6"
-        clicnic_input_name = "c_section_0"
+            # wait
+            waitForPageReady(wait=self.wait)
 
-        # wait
-        waitForLoad(self.driver)
+            # get value of clinic
+            soup = BeautifulSoup(self.driver.page_source, "lxml")
+            clinic_id = soup.find(
+                "input", {"id": "objdw_ext_ovstost_0_1"}
+            ).get("value")
 
-        # select clinic
-        clinic_select = WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-            EC.element_to_be_clickable((By.ID, clicnic_select_id))
-        )
-        clinic_select = Select(clinic_select)
-        clinic_select.select_by_visible_text(CLINIC_NAME)
-
-        # allow js blur effect to run
-        clinic_select = WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-            EC.element_to_be_clickable((By.ID, clicnic_select_id))
-        )
-        clinic_select.send_keys(Keys.TAB)
-
-        # wait for the form to update
-        WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-            EC.text_to_be_present_in_element_value(
-                (By.NAME, clicnic_input_name), CLINIC_ID
-            )
-        )
+            if not clinic_id:
+                break
 
         # set start date
         start_date = "01/01/2500"
         start_date_id = "objdw_ext_cnq_0_1"
 
         setInputDate(
-            driver=self.driver, input_id=start_date_id, date_str=start_date
+            wait=self.wait, input_id=start_date_id, date_str=start_date
         )
 
-        # wait
-        waitForLoad(self.driver)
+        # select clinic
+        clicnic_select_id = "objdw_ext_cnq_0_6"
+        clicnic_input_name = "c_section_0"
 
-        # set patient status
-        patient_status_input_name = "c_ovstost_0"
-        patient_status_id = "objdw_ext_ovstost_0_2"
-        patient_status = WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-            EC.element_to_be_clickable((By.ID, patient_status_id))
+        clinic_select = self.wait.until(
+            EC.element_to_be_clickable((By.ID, clicnic_select_id))
         )
-
-        patient_status_select = Select(patient_status)
-        patient_status_select.select_by_value("")
+        clinic_select = Select(clinic_select)
+        clinic_select.select_by_visible_text(CLINIC_NAME)
 
         # allow js blur effect to run
-        patient_status = WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-            EC.element_to_be_clickable((By.ID, patient_status_id))
+        clinic_select = self.wait.until(
+            EC.element_to_be_clickable((By.ID, clicnic_select_id))
         )
-        patient_status.send_keys(Keys.TAB)
+        clinic_select.send_keys(Keys.TAB)
 
         # wait for the form to update
-        patient_status_input = WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-            EC.visibility_of_element_located(
-                (By.NAME, patient_status_input_name)
+        self.wait.until(
+            EC.text_to_be_present_in_element_value(
+                (By.NAME, clicnic_input_name), CLINIC_ID
             )
         )
-        patient_status_input.send_keys("" + Keys.TAB)
-
-        # # wait for the form to update
-        # WebDriverWait(self.driver, EXPLICIT_WAIT).until(
-        #     EC.text_to_be_present_in_element_value(
-        #         (By.NAME, patient_status_input_name), ""
-        #     )
-        # )
 
         # click search
-        search_icon_css = "img[src*='find_enab_32x32.gif']"
-        search_icon = WebDriverWait(self.driver, EXPLICIT_WAIT).until(
+        search_icon_css = "img[src$='find_enab_32x32.gif']"
+        search_icon = self.wait.until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, search_icon_css))
         )
         search_icon.click()
 
         # wait
-        waitForLoad(self.driver)
+        waitForPageReady(wait=self.wait)
 
         # read hn
         HNs = praseHN(self.driver.page_source)
 
         while True:
-            link = isNextPageLinkExists(driver=self.driver)
+            link = isNextPageLinkExists(driver=self.driver, wait=self.wait)
 
             if link:
                 link.click()

@@ -28,6 +28,7 @@ class AllPatientResource(Resource):
             "nationality",
             "healthInsurance",
             "dateOfBirth",
+            "phoneNumbers",
         ]
 
         patient_schema = PatientSchema(

@@ -30,10 +30,13 @@ class PatientModel(BaseModel):
     maritalStatus = db.Column(db.Unicode())
     nationality = db.Column(db.Unicode())
 
+    address = db.Column(db.Unicode())
+
     occupation = db.Column(db.Unicode())
     education = db.Column(db.Unicode())
 
     healthInsurance = db.Column(db.Unicode(), nullable=False)
+    care = db.Column(db.Unicode())
 
     phoneNumbers = db.Column(ARRAY(db.Unicode()))
     relativePhoneNumbers = db.Column(ARRAY(db.Unicode()))
