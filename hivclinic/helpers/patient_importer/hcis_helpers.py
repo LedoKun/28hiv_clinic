@@ -157,13 +157,21 @@ def praseVisits(page_source):
         for element in visit_dates
     ]
 
-    primary_care = soup.find("input", id="objdw_cnifcn_ext_ovst_0_28")
-    secondary_care = soup.find("input", id="objdw_cnifcn_ext_ovst_0_27")
-    regular_care = soup.find("input", id="objdw_cnifcn_ext_ovst_0_29")
+    primary_care = (
+        soup.find("input", id="objdw_cnifcn_ext_ovst_0_28").get("value") or "-"
+    )
+
+    secondary_care = (
+        soup.find("input", id="objdw_cnifcn_ext_ovst_0_27").get("value") or "-"
+    )
+
+    regular_care = (
+        soup.find("input", id="objdw_cnifcn_ext_ovst_0_29").get("value") or "-"
+    )
 
     cares = f"{primary_care}/{secondary_care}/{regular_care}"
 
-    return visit_dates, cares
+    return cares, visit_dates
 
 
 def praseTwoTablePage(
@@ -182,7 +190,9 @@ def praseTwoTablePage(
         for element in elements:
             # read subelements
             first_page_source = driver.page_source
-            first_HCIS_results = elementsPraser(page_source=first_page_source)
+            first_hcis_class, _ = elementsPraser(
+                page_source=driver.page_source, wait=wait
+            )
 
             # read dates
             date_str = element.text.split(element_text_split_by)[0]
@@ -202,28 +212,28 @@ def praseTwoTablePage(
 
             if not is_first_element:
                 wait.until(
-                    lambda d: (driver.page_source != first_page_source)
-                    and (
-                        first_HCIS_results[0]
-                        != elementsPraser(page_source=driver.page_source)[0]
+                    lambda d: first_page_source != d.page_source
+                    and isTwoTableGridLoaded(
+                        elementsPraser(page_source=d.page_source, wait=wait)[
+                            0
+                        ],
+                        first_hcis_class,
                     )
-                )
-
-                results.append(
-                    [
-                        date_str,
-                        elementsPraser(page_source=driver.page_source)[1],
-                    ]
                 )
 
             else:
                 is_first_element = False
-                results.append([date_str, first_HCIS_results[1]])
+
+            _, results_grid = elementsPraser(
+                page_source=driver.page_source, wait=wait
+            )
+            results.append([date_str, results_grid])
 
         # if there is a next page
         next_page = isNextPageLinkExists(driver, wait)
 
         if next_page:
+            is_first_element = True
             next_page.click()
 
         else:
@@ -232,8 +242,24 @@ def praseTwoTablePage(
     return results
 
 
-def praseMedication(page_source) -> list:
+def isTwoTableGridLoaded(a_class: str, b_class: str) -> bool:
+    if a_class is None or b_class is None:
+        return False
+
+    elif a_class != b_class:
+        return True
+
+    else:
+        return False
+
+
+def praseMedication(page_source, wait) -> list:
     read_from_name_regex = r"^meditem_name_\d+"
+    read_from_name_css = "span[name^='meditem_name_']"
+
+    wait.until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, read_from_name_css))
+    )
 
     soup = BeautifulSoup(page_source, "lxml")
     medications = soup.find_all(
@@ -254,11 +280,17 @@ def praseMedication(page_source) -> list:
     return hcis_class, medications
 
 
-def praseInvestigation(page_source) -> str:
+def praseInvestigation(page_source, wait) -> str:
     lab_string = ""
 
     ix_name_regex = r"^labexm_labexmnm_\d+"
     ix_result_regex = r"^compute_2_\d+"
+
+    ix_result_css = "input[name^='compute_2_']"
+
+    wait.until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, ix_result_css))
+    )
 
     soup = BeautifulSoup(page_source, "lxml")
     lab_names = soup.find_all(
@@ -281,7 +313,11 @@ def praseInvestigation(page_source) -> str:
     labs = list(zip(lab_names, lab_results))
 
     # sort result for later comparision
-    labs = sorted(labs, key=lambda lab: lab[0])
+    try:
+        labs = sorted(labs, key=lambda lab: lab[0])
+
+    except Exception:
+        pass
 
     for lab in labs:
         if not lab_string:

@@ -99,23 +99,24 @@ def start_workers():
     for imported_patient in imported_patients:
         result_list.append(imported_patient)
 
+    for worker_id in range(ITERATION_COUNT):
+        pool.apply_async(
+            selenium_task,
+            args=(worker_id, queue, hn_imported, result_list, result_lock),
+        )
+
     # start workers
     try:
-        for worker_id in range(ITERATION_COUNT):
-            pool.apply_async(
-                selenium_task,
-                args=(worker_id, queue, hn_imported, result_list, result_lock),
-            )
+        pool.close()
+        pool.join()
 
     except KeyboardInterrupt:
         logger.warning("[Main] Caught KeyboardInterrupt, terminating workers")
         pool.terminate()
         pool.join()
 
-    else:
+    finally:
         logger.info("[Main] Task finished, terminating")
-        pool.close()
-        pool.join()
 
 
 def hn_list_scraper():
