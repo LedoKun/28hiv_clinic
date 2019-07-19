@@ -1,17 +1,15 @@
 from datetime import date
-from dateutil.relativedelta import relativedelta
-
-from sqlalchemy import and_, func, or_, exists
 
 import pandas as pd
+from dateutil.relativedelta import relativedelta
+from sqlalchemy import Unicode, and_, case, func, or_
+from sqlalchemy.sql.expression import cast
+
 from hivclinic import db
 from hivclinic.models.investigation_model import InvestigationModel
 from hivclinic.models.partner_model import PartnerModel
 from hivclinic.models.patient_model import PatientModel
 from hivclinic.models.visit_model import VisitModel
-import numpy as np
-
-import sys
 
 
 def calculate_age_string(date_of_birth):
@@ -55,8 +53,8 @@ def dataDictMaker(
         db.session.query(
             VisitModel.patientID, func.min(VisitModel.date).label("firstVisit")
         )
-        .group_by(VisitModel.patientID)
         .filter(VisitModel.date.between(startDate, endDate))
+        .group_by(VisitModel.patientID)
         .subquery()
     )
 
@@ -66,26 +64,35 @@ def dataDictMaker(
             InvestigationModel.patientID,
             func.min(InvestigationModel.date).label("firstLab"),
         )
-        .group_by(InvestigationModel.patientID)
         .filter(InvestigationModel.date.between(startDate, endDate))
+        .group_by(InvestigationModel.patientID)
         .subquery()
     )
 
-    # # find register date
-    # subquery_registerDate = (
-    #     db.session.query(
-    #         func.min(
-    #             subquery_firstVisit.c.firstVisit,
-    #             subquery_firstLab.c.firstLab
-    #         )
-    #         .label("registerDate")
-    #     )
-    #     .filter(
-    #         and_(
-
-    #         )
-    #     )
-    # )
+    # find register date
+    subquery_registerDate = (
+        db.session.query(
+            PatientModel.id.label("patientID"),
+            func.least(
+                func.coalesce(subquery_firstVisit.c.firstVisit, date.max),
+                func.coalesce(subquery_firstLab.c.firstLab, date.max),
+            ).label("registerDate"),
+        )
+        .outerjoin(
+            subquery_firstVisit,
+            subquery_firstVisit.c.patientID == PatientModel.id,
+        )
+        .outerjoin(
+            subquery_firstLab, subquery_firstLab.c.patientID == PatientModel.id
+        )
+        .filter(
+            or_(
+                subquery_firstVisit.c.firstVisit.isnot(None),
+                subquery_firstLab.c.firstLab.isnot(None),
+            )
+        )
+        .subquery()
+    )
 
     # find first antihiv test result
     subquery_firstAntiHIV = (
@@ -93,13 +100,13 @@ def dataDictMaker(
             InvestigationModel.patientID,
             func.min(InvestigationModel.date).label("firstAntiHIV"),
         )
-        .group_by(InvestigationModel.patientID)
         .filter(
             and_(
                 InvestigationModel.antiHIV.isnot(None),
                 InvestigationModel.date.between(startDate, endDate),
             )
         )
+        .group_by(InvestigationModel.patientID)
         .subquery()
     )
 
@@ -126,7 +133,6 @@ def dataDictMaker(
             InvestigationModel.patientID,
             func.min(InvestigationModel.date).label("firstPosAntiHIV"),
         )
-        .group_by(InvestigationModel.patientID)
         .filter(
             and_(
                 InvestigationModel.antiHIV != "Negative",
@@ -134,6 +140,7 @@ def dataDictMaker(
                 InvestigationModel.date.between(startDate, endDate),
             )
         )
+        .group_by(InvestigationModel.patientID)
         .subquery()
     )
 
@@ -153,13 +160,13 @@ def dataDictMaker(
             VisitModel.patientID,
             func.min(VisitModel.date).label("arvInitiationDate"),
         )
-        .group_by(VisitModel.patientID)
         .filter(
             and_(
                 func.array_length(VisitModel.arvMedications, 1) != 0,
                 VisitModel.date.between(startDate, endDate),
             )
         )
+        .group_by(VisitModel.patientID)
         .subquery()
     )
 
@@ -180,19 +187,53 @@ def dataDictMaker(
         .subquery()
     )
 
+    # find days to start ARV
+    subquery_timeToStartARV_raw = (
+        db.session.query(
+            PatientModel.id.label("patientID"),
+            (
+                subquery_arvInitiationDate.c.arvInitiationDate
+                - subquery_firstPosAntiHIV.c.firstPosAntiHIV
+            ).label("timeToStartARV"),
+        )
+        .outerjoin(
+            subquery_arvInitiationDate,
+            subquery_arvInitiationDate.c.patientID == PatientModel.id,
+        )
+        .outerjoin(
+            subquery_firstPosAntiHIV,
+            subquery_firstPosAntiHIV.c.patientID == PatientModel.id,
+        )
+        .filter(
+            and_(
+                subquery_arvInitiationDate.c.arvInitiationDate.isnot(None),
+                subquery_firstPosAntiHIV.c.firstPosAntiHIV.isnot(None),
+            )
+        )
+        .subquery()
+    )
+
+    subquery_timeToStartARV = db.session.query(
+        subquery_timeToStartARV_raw.c.patientID,
+        case(
+            [(subquery_timeToStartARV_raw.c.timeToStartARV < 0, 0)],
+            else_=subquery_timeToStartARV_raw.c.timeToStartARV,
+        ).label("timeToStartARV"),
+    ).subquery()
+
     # find last/current ARV regimen
     subquery_lastARVPrescriptionDate = (
         db.session.query(
             VisitModel.patientID,
             func.max(VisitModel.date).label("lastARVPrescriptionDate"),
         )
-        .group_by(VisitModel.patientID)
         .filter(
             and_(
                 func.array_length(VisitModel.arvMedications, 1) != 0,
                 VisitModel.date.between(startDate, endDate),
             )
         )
+        .group_by(VisitModel.patientID)
         .subquery()
     )
 
@@ -219,17 +260,17 @@ def dataDictMaker(
             InvestigationModel.patientID,
             func.max(InvestigationModel.date).label("lastViralLoadDate"),
         )
-        .group_by(InvestigationModel.patientID)
         .filter(
             and_(
                 InvestigationModel.viralLoad.isnot(None),
                 InvestigationModel.date.between(startDate, endDate),
             )
         )
+        .group_by(InvestigationModel.patientID)
         .subquery()
     )
 
-    subquery_lastVLResults = (
+    subquery_lastVLResults_raw = (
         db.session.query(
             subquery_lastVLLabDate.c.lastViralLoadDate,
             InvestigationModel.viralLoad.label("lastViralLoad"),
@@ -246,20 +287,33 @@ def dataDictMaker(
         .subquery()
     )
 
+    subquery_lastVLResults = db.session.query(
+        subquery_lastVLResults_raw.c.patientID,
+        subquery_lastVLResults_raw.c.lastViralLoadDate,
+        case(
+            [
+                (
+                    subquery_lastVLResults_raw.c.lastViralLoad == -1,
+                    "Undetectable",
+                )
+            ],
+            else_=cast(subquery_lastVLResults_raw.c.lastViralLoad, Unicode),
+        ).label("lastViralLoad"),
+    ).subquery()
+
     # find first CD4
     subquery_firstCD4LabDate = (
         db.session.query(
             InvestigationModel.patientID,
             func.min(InvestigationModel.date).label("firstCD4LabDate"),
         )
-        .group_by(InvestigationModel.patientID)
         .filter(
             and_(
                 InvestigationModel.absoluteCD4.isnot(None),
-                InvestigationModel.percentCD4.isnot(None),
                 InvestigationModel.date.between(startDate, endDate),
             )
         )
+        .group_by(InvestigationModel.patientID)
         .subquery()
     )
 
@@ -288,34 +342,39 @@ def dataDictMaker(
             InvestigationModel.patientID,
             func.max(InvestigationModel.date).label("lastCD4LabDate"),
         )
-        .group_by(InvestigationModel.patientID)
         .filter(
             and_(
                 InvestigationModel.absoluteCD4.isnot(None),
-                InvestigationModel.percentCD4.isnot(None),
                 InvestigationModel.date.between(startDate, endDate),
             )
         )
+        .group_by(InvestigationModel.patientID)
         .subquery()
     )
 
     subquery_lastCD4Results = (
         db.session.query(
-            subquery_lastCD4LabDate.c.lastCD4LabDate,
             InvestigationModel.id,
+            InvestigationModel.date.label("lastCD4LabDate"),
             InvestigationModel.absoluteCD4.label("lastCD4Result"),
             InvestigationModel.percentCD4.label("lastPercentCD4Result"),
             InvestigationModel.patientID,
+        )
+        .outerjoin(
+            subquery_lastCD4LabDate,
+            subquery_lastCD4LabDate.c.patientID
+            == InvestigationModel.patientID,
+        )
+        .outerjoin(
+            subquery_firstCD4Results,
+            subquery_firstCD4Results.c.patientID
+            == InvestigationModel.patientID,
         )
         .filter(
             and_(
                 subquery_lastCD4LabDate.c.lastCD4LabDate
                 == InvestigationModel.date,
-                subquery_lastCD4LabDate.c.patientID
-                == InvestigationModel.patientID,
-                ~exists().where(
-                    subquery_firstCD4Results.c.id == InvestigationModel.id
-                ),
+                subquery_firstCD4Results.c.id.isnot(None),
             )
         )
         .subquery()
@@ -383,7 +442,7 @@ def dataDictMaker(
             PatientModel.nationality,
             PatientModel.address,
             PatientModel.healthInsurance,
-            PatientModel.care,
+            PatientModel.cares,
             func.array_to_string(PatientModel.phoneNumbers, joinArrayBy),
             func.array_to_string(
                 PatientModel.relativePhoneNumbers, joinArrayBy
@@ -394,6 +453,7 @@ def dataDictMaker(
             PatientModel.patientStatus,
             PatientModel.referredOutTo,
             subquery_numberOfPartners.c.numberOfPartners,
+            subquery_registerDate.c.registerDate,
             subquery_firstVisit.c.firstVisit,
             subquery_firstLab.c.firstLab,
             subquery_firstAntiHIVResult.c.firstAntiHIV,
@@ -403,6 +463,7 @@ def dataDictMaker(
             func.array_to_string(
                 subquery_initialARV.c.initialARV, joinArrayBy
             ),
+            subquery_timeToStartARV.c.timeToStartARV,
             subquery_currentARV.c.lastARVPrescriptionDate,
             func.array_to_string(
                 subquery_currentARV.c.currentARV, joinArrayBy
@@ -424,6 +485,10 @@ def dataDictMaker(
             subquery_numberOfPartners.c.patientID == PatientModel.id,
         )
         .outerjoin(
+            subquery_registerDate,
+            subquery_registerDate.c.patientID == PatientModel.id,
+        )
+        .outerjoin(
             subquery_firstVisit,
             subquery_firstVisit.c.patientID == PatientModel.id,
         )
@@ -441,6 +506,10 @@ def dataDictMaker(
         .outerjoin(
             subquery_initialARV,
             subquery_initialARV.c.patientID == PatientModel.id,
+        )
+        .outerjoin(
+            subquery_timeToStartARV,
+            subquery_timeToStartARV.c.patientID == PatientModel.id,
         )
         .outerjoin(
             subquery_currentARV,
@@ -489,30 +558,6 @@ def dataDictMaker(
 
     df = pd.read_sql(data_dict, db.session.bind)
 
-    # find register date
-    date_df = df.loc[:, ["firstVisit", "firstLab"]]
-    date_df.fillna(date.max, inplace=True)
-
-    register_date_series = date_df.apply(np.min, axis=1)
-    df.insert(22, "registerDate", register_date_series)
-
-    # convert to datetime object
-    if columns_to_iso_date:
-        df.loc[:, columns_to_iso_date] = pd.DataFrame(
-            df.loc[:, columns_to_iso_date]
-        )
-
-    # calculate time to start ARV
-    time_to_arv = (
-        df["arvInitiationDate"] - df["firstPosAntiHIV"]
-    ).dt.days.fillna(value=sys.maxsize)
-
-    # numpy.inf are not considered NA values
-    time_to_arv.loc[time_to_arv < 0] = 0
-    time_to_arv.loc[time_to_arv == sys.maxsize] = ""
-
-    df.insert(30, "timeToStartArv", time_to_arv)
-
     # calculate age
     if calculateAgeAsStr:
         age_series = df["dateOfBirth"].apply(calculate_age_string)
@@ -533,9 +578,6 @@ def dataDictMaker(
             if isinstance(date_obj, date)
             else date_obj
         )
-
-    # replace -1 to undetectable
-    df["lastViralLoad"].replace(-1, "Undetectable", inplace=True)
 
     # add column names
     column_names = [

@@ -36,7 +36,7 @@ class PatientModel(BaseModel):
     education = db.Column(db.Unicode())
 
     healthInsurance = db.Column(db.Unicode(), nullable=False)
-    care = db.Column(db.Unicode())
+    cares = db.Column(db.Unicode())
 
     phoneNumbers = db.Column(ARRAY(db.Unicode()))
     relativePhoneNumbers = db.Column(ARRAY(db.Unicode()))
