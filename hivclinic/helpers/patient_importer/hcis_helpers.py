@@ -1,7 +1,7 @@
 import re
 
 from bs4 import BeautifulSoup
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -243,7 +243,7 @@ def praseTwoTablePage(
 
 
 def isTwoTableGridLoaded(a_class: str, b_class: str) -> bool:
-    if a_class is None or b_class is None:
+    if a_class is None and b_class is None:
         return False
 
     elif a_class != b_class:
@@ -257,14 +257,28 @@ def praseMedication(page_source, wait) -> list:
     read_from_name_regex = r"^meditem_name_\d+"
     read_from_name_css = "span[name^='meditem_name_']"
 
-    wait.until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, read_from_name_css))
-    )
+    try:
+        wait.until(
+            EC.presence_of_element_located(
+                (By.CSS_SELECTOR, read_from_name_css)
+            )
+        )
 
-    soup = BeautifulSoup(page_source, "lxml")
-    medications = soup.find_all(
-        "span", attrs={"name": re.compile(read_from_name_regex)}
-    )
+    except TimeoutException:
+        # no elements found
+        soup = BeautifulSoup(page_source, "lxml")
+        medications = soup.find_all(
+            "span", attrs={"name": re.compile(read_from_name_regex)}
+        )
+
+        if not medications:
+            pass
+
+    else:
+        soup = BeautifulSoup(page_source, "lxml")
+        medications = soup.find_all(
+            "span", attrs={"name": re.compile(read_from_name_regex)}
+        )
 
     # get unique class from first result
     if medications:
@@ -288,17 +302,31 @@ def praseInvestigation(page_source, wait) -> str:
 
     ix_result_css = "input[name^='compute_2_']"
 
-    wait.until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, ix_result_css))
-    )
+    try:
+        wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ix_result_css))
+        )
 
-    soup = BeautifulSoup(page_source, "lxml")
-    lab_names = soup.find_all(
-        "input", attrs={"name": re.compile(ix_name_regex)}
-    )
-    lab_results = soup.find_all(
-        "input", attrs={"name": re.compile(ix_result_regex)}
-    )
+    except TimeoutException:
+        soup = BeautifulSoup(page_source, "lxml")
+        lab_names = soup.find_all(
+            "input", attrs={"name": re.compile(ix_name_regex)}
+        )
+        lab_results = soup.find_all(
+            "input", attrs={"name": re.compile(ix_result_regex)}
+        )
+
+        if not (lab_names and lab_results):
+            pass
+
+    else:
+        soup = BeautifulSoup(page_source, "lxml")
+        lab_names = soup.find_all(
+            "input", attrs={"name": re.compile(ix_name_regex)}
+        )
+        lab_results = soup.find_all(
+            "input", attrs={"name": re.compile(ix_result_regex)}
+        )
 
     # get unique class from first result
     if lab_names:
@@ -331,10 +359,18 @@ def praseInvestigation(page_source, wait) -> str:
 
 def praseHN(page_source):
     soup = BeautifulSoup(page_source, "lxml")
-    HNs = soup.find_all("span", attrs={"name": re.compile(r"c_hn_\d+")})
-    HNs = [element.text for element in HNs]
+    HNs = soup.find_all("input", attrs={"name": re.compile(r"c_hn_\d+")})
 
-    return HNs
+    # get hcis class
+    try:
+        hcis_class = HNs[0]["class"]
+
+    except Exception:
+        hcis_class = None
+
+    HNs = [element["value"] for element in HNs]
+
+    return hcis_class, HNs
 
 
 def matchLabs(allLabs: list):

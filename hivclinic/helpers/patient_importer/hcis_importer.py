@@ -27,9 +27,7 @@ from .hcis_helpers import (
 )
 from .importer import Importer
 
-CLINIC_NAME = "วัณโรค"
-CLINIC_ID = "111"
-
+CLINIC_IDS = [["111", "วัณโรค"], ["121", "นิรนาม"]]
 EXPLICIT_WAIT = 15
 
 
@@ -344,80 +342,93 @@ class HCISImporter(Importer):
             + f"srvname={self.server}|"
         )
 
-        self.driver.delete_all_cookies()
-        self.driver.get(url)
+        HNs = []
 
-        # wait
-        waitForPageReady(wait=self.wait)
-
-        while True:
-            clickNew(self.wait)
+        for CLINIC_ID in CLINIC_IDS:
+            self.driver.delete_all_cookies()
+            self.driver.get(url)
 
             # wait
             waitForPageReady(wait=self.wait)
 
-            # get value of clinic
-            soup = BeautifulSoup(self.driver.page_source, "lxml")
-            clinic_id = soup.find(
-                "input", {"id": "objdw_ext_ovstost_0_1"}
-            ).get("value")
+            while True:
+                clickNew(self.wait)
 
-            if not clinic_id:
-                break
+                # wait
+                waitForPageReady(wait=self.wait)
 
-        # set start date
-        start_date = "01/01/2500"
-        start_date_id = "objdw_ext_cnq_0_1"
+                # get value of clinic
+                soup = BeautifulSoup(self.driver.page_source, "lxml")
+                clinic_id = soup.find(
+                    "input", {"id": "objdw_ext_ovstost_0_1"}
+                ).get("value")
 
-        setInputDate(
-            wait=self.wait, input_id=start_date_id, date_str=start_date
-        )
+                if not clinic_id:
+                    break
 
-        # select clinic
-        clicnic_select_id = "objdw_ext_cnq_0_6"
-        clicnic_input_name = "c_section_0"
+            first_hcis_class = praseHN(self.driver.page_source)[0]
 
-        clinic_select = self.wait.until(
-            EC.element_to_be_clickable((By.ID, clicnic_select_id))
-        )
-        clinic_select = Select(clinic_select)
-        clinic_select.select_by_visible_text(CLINIC_NAME)
+            # set start date
+            start_date = "01/01/2500"
+            start_date_id = "objdw_ext_cnq_0_1"
 
-        # allow js blur effect to run
-        clinic_select = self.wait.until(
-            EC.element_to_be_clickable((By.ID, clicnic_select_id))
-        )
-        clinic_select.send_keys(Keys.TAB)
-
-        # wait for the form to update
-        self.wait.until(
-            EC.text_to_be_present_in_element_value(
-                (By.NAME, clicnic_input_name), CLINIC_ID
+            setInputDate(
+                wait=self.wait, input_id=start_date_id, date_str=start_date
             )
-        )
 
-        # click search
-        search_icon_css = "img[src$='find_enab_32x32.gif']"
-        search_icon = self.wait.until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, search_icon_css))
-        )
-        search_icon.click()
+            # select clinic
+            clicnic_select_id = "objdw_ext_cnq_0_6"
+            clicnic_input_name = "c_section_0"
 
-        # wait
-        waitForPageReady(wait=self.wait)
+            clinic_select = self.wait.until(
+                EC.element_to_be_clickable((By.ID, clicnic_select_id))
+            )
+            clinic_select = Select(clinic_select)
+            clinic_select.select_by_visible_text(CLINIC_ID[1])
 
-        # read hn
-        HNs = praseHN(self.driver.page_source)
+            # allow js blur effect to run
+            clinic_select = self.wait.until(
+                EC.element_to_be_clickable((By.ID, clicnic_select_id))
+            )
+            clinic_select.send_keys(Keys.TAB)
 
-        while True:
-            link = isNextPageLinkExists(driver=self.driver, wait=self.wait)
+            # wait for the form to update
+            self.wait.until(
+                EC.text_to_be_present_in_element_value(
+                    (By.NAME, clicnic_input_name), CLINIC_ID[0]
+                )
+            )
 
-            if link:
-                link.click()
-                HNs = HNs + praseHN(self.driver.page_source)
+            # click search
+            search_icon_css = "input[name='btn_find_0']"
+            search_icon = self.wait.until(
+                EC.element_to_be_clickable((By.CSS_SELECTOR, search_icon_css))
+            )
+            search_icon.click()
 
-            else:
-                if HNs:
+            # wait
+            self.wait.until(
+                lambda d: praseHN(d.page_source)[0] != first_hcis_class
+            )
+
+            # read hn
+            hcis_class, page_hns = praseHN(self.driver.page_source)
+
+            HNs = HNs + page_hns
+
+            while True:
+                link = isNextPageLinkExists(driver=self.driver, wait=self.wait)
+
+                if link:
+                    link.click()
+
+                    self.wait.until(
+                        lambda d: praseHN(d.page_source)[0] != hcis_class
+                    )
+
+                    HNs = HNs + praseHN(self.driver.page_source)[1]
+
+                else:
                     break
 
         return list(set(HNs))
