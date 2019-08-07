@@ -84,19 +84,12 @@ class HCISImporter(Importer):
 
         # wait
         waitForPageReady(wait=self.wait)
-        old_source = self.driver.page_source
 
         while isDisplayPatientInfo(driver=self.driver, wait=self.wait):
             clickNew(self.wait, False)
 
             # wait
-            self.wait.until(
-                (
-                    lambda d: d.execute_script("return document.readyState")
-                    == "complete"
-                    and (d.page_source != old_source)
-                )
-            )
+            waitForPageReady(wait=self.wait)
 
         # search for the patient
         text_box_css = "#objdw_head_0_4"
@@ -155,19 +148,12 @@ class HCISImporter(Importer):
 
         # wait
         waitForPageReady(wait=self.wait)
-        old_source = self.driver.page_source
 
         while isDisplayPatientInfo(driver=self.driver, wait=self.wait):
             clickNew(self.wait)
 
             # wait
-            self.wait.until(
-                (
-                    lambda d: d.execute_script("return document.readyState")
-                    == "complete"
-                    and (d.page_source != old_source)
-                )
-            )
+            waitForPageReady(wait=self.wait)
 
         # search for the patient
         searchHN(wait=self.wait, text_box_css="#objdw_lupt_0_2", hn=hn)
@@ -225,13 +211,7 @@ class HCISImporter(Importer):
             clickNew(self.wait)
 
             # wait
-            self.wait.until(
-                (
-                    lambda d: d.execute_script("return document.readyState")
-                    == "complete"
-                    and (d.page_source != old_source)
-                )
-            )
+            waitForPageReady(wait=self.wait)
 
         # search for the patient
         text_box_css = "#objdw_lupt_0_2"
@@ -295,19 +275,12 @@ class HCISImporter(Importer):
 
         # wait
         waitForPageReady(wait=self.wait)
-        old_source = self.driver.page_source
 
         while isDisplayPatientInfo(driver=self.driver, wait=self.wait):
             clickNew(self.wait)
 
             # wait
-            self.wait.until(
-                (
-                    lambda d: d.execute_script("return document.readyState")
-                    == "complete"
-                    and (d.page_source != old_source)
-                )
-            )
+            waitForPageReady(wait=self.wait)
 
         # search for the patient
         text_box_css = "#objdw_lupt_0_2"

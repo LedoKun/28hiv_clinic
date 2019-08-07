@@ -244,7 +244,7 @@ def praseTwoTablePage(
 
 def isTwoTableGridLoaded(a_class: str, b_class: str) -> bool:
     if a_class is None and b_class is None:
-        return False
+        return True
 
     elif a_class != b_class:
         return True

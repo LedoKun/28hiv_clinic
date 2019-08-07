@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from io import BytesIO
 
 from dateutil.relativedelta import relativedelta
@@ -291,12 +291,13 @@ class OverviewResource(Resource):
         df = df.loc[:, [column_name]]
 
         count_data = (
-            df.groupby([df[column_name].dt.weekday_name.rename("Day")])
+            df.groupby([df[column_name].dt.weekday.rename("Day")])
             .agg({"count"})
             .sort_index()
         )
 
         count_data.columns = [count_column_name]
+        df[column_name] = df[column_name].dt.weekday_name
 
         return count_data.T
 
@@ -387,6 +388,7 @@ class OverviewResource(Resource):
     ):
         df.dropna(axis="index", subset=[vl_column_name], inplace=True)
         df.replace("Undetectable", -1, inplace=True)
+        df[vl_column_name] = df[vl_column_name].astype(int)
 
         bins = [-2, 0, 200, 1000, 9999999]
         labels = ["Undetectable", "VL ≤ 200", "VL ≤ 1000", "VL > 1000"]
@@ -414,22 +416,28 @@ class OverviewResource(Resource):
     )
     def get(self, args):
         """Provide Clinic's Overview Statistics"""
+        joinArrayBy = ","
         patientDataDict_df = dataDictMaker(
-            joinArrayBy=", ",
+            joinArrayBy=joinArrayBy,
             calculateAgeAsStr=True,
             convertUUID=True,
             startDate=args["startDate"],
             endDate=args["endDate"],
         )
 
-        col_name = "Register date"
-        patientDataDict_df[col_name] = pd.to_datetime(
-            patientDataDict_df[col_name], errors="coerce"
+        # recalculate age as relative time
+        patientDataDict_df["Date of birth"] = pd.to_datetime(
+            patientDataDict_df["Date of birth"], errors="ignore", format='%d-%m-%Y'
         )
 
         # calculate age
         patientDataDict_df["Age"] = patientDataDict_df["Date of birth"].apply(
             self.calculate_age
+        )
+
+        col_name = "Register date"
+        patientDataDict_df[col_name] = pd.to_datetime(
+            patientDataDict_df[col_name], errors="coerce", infer_datetime_format=True
         )
 
         # thais and nonthais
@@ -452,7 +460,7 @@ class OverviewResource(Resource):
         )
 
         patient_visit_df["date"] = pd.to_datetime(
-            patient_visit_df["date"], errors="coerce"
+            patient_visit_df["date"], errors="coerce", infer_datetime_format=True
         )
 
         # ix df
@@ -468,7 +476,7 @@ class OverviewResource(Resource):
         )
 
         patient_ix_df["date"] = pd.to_datetime(
-            patient_ix_df["date"], errors="coerce"
+            patient_ix_df["date"], errors="coerce", infer_datetime_format=True
         )
 
         # count new patients
@@ -551,12 +559,25 @@ class OverviewResource(Resource):
             column_names=["Sex", "Gender", "Risk behaviors"],
         )
 
-        # Diagnosis before ARV initiation
-        patient_age_init_dx = self.grouppedTable(
-            df=patientDataDict_df.loc[
-                :, ["ID", "Diagnosis before ARV initiation"]
+        # Other diagnosis before ARV initiation
+        column_name = "Other diagnosis before ARV initiation"
+
+        dx_df = patientDataDict_df.loc[
+            :, ["ID", column_name]
+        ]
+        
+        dx_df[column_name] = (
+            dx_df[column_name]
+            .apply(lambda data_string: data_string.split(joinArrayBy) if isinstance(data_string, str) else data_string)
+        )
+
+        dx_df = dx_df.explode(column_name)
+
+        patient_other_dx = self.grouppedTable(
+            df=dx_df.loc[
+                :, ["ID", column_name]
             ],
-            column_names=["Diagnosis before ARV initiation"],
+            column_names=[column_name],
             no_data_as="N/A",
         )
 
@@ -653,7 +674,7 @@ class OverviewResource(Resource):
             "patientAgeSexGenderRisk": patient_age_sex_gender_risk.to_html(
                 escape=True, bold_rows=False, border=0
             ),
-            "patientAgeInitDx": patient_age_init_dx.to_html(
+            "patienOtherDx": patient_other_dx.to_html(
                 escape=True, bold_rows=False, border=0
             ),
             "patientCurrentARV": patient_current_arv.to_html(
